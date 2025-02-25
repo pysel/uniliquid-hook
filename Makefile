@@ -19,3 +19,6 @@ swap:
 
 fund-me:
 	forge script script/testnet/FundERC20.s.sol:FundERC20Script --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
+
+add-liquidity:
+	forge script script/02_AddLiquidity.s.sol:AddLiquidityScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)

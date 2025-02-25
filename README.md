@@ -41,6 +41,10 @@ Deployment artifacts:
 
 These can also be found in the `broadcast-sepolia` folder.
 
+Example wallet:
+
+![Example wallet](assets/example-wallet.png)
+
 ## Why Stablecoins?
 
 Uniswap V4 is built on top of Uniswap V3. Uniswap V3 is a concentrated liquidity protocol that allows LPs to concentrate their liquidity into specific price ranges.

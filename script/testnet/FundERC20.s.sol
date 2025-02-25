@@ -15,8 +15,8 @@ contract FundERC20Script is Script, Config {
 
     function run() public {
         vm.startBroadcast();
-        MockToken(address(usdc)).mint(msg.sender, 10e18);
-        MockToken(address(usdt)).mint(msg.sender, 10e18);
+        MockToken(address(usdc)).mint(msg.sender, 10000e18);
+        MockToken(address(usdt)).mint(msg.sender, 10000e18);
         vm.stopBroadcast();
     }
 }
