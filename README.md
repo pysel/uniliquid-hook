@@ -146,3 +146,5 @@ The hook is deployed on Unichain Sepolia with the following addresses:
 - Hook: `0xfD51cB09A99dEE082B88870d58AdFF42A3976a80`
 - Mock USDC: `0x9A633a7F11f61658E161A432A013507cF1960F96`
 - Mock USDT: `0x0702d07EFD2518921ae738C74BECb5e24e47F662`
+
+These can also be found in the `broadcast-unichain-sepolia` folder.
