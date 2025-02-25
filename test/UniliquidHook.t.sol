@@ -96,7 +96,7 @@ contract UniliquidHookTest is Test, Fixtures {
         uint256 stablecoin0BalanceBefore = currency0.balanceOf(address(this));
         uint256 stablecoin1BalanceBefore = currency1.balanceOf(address(this));
 
-        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount);
+        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount, amount);
 
         // verify pool reserves are correctly updated
         (uint256 poolReserves0After, uint256 poolReserves1After) = hook.poolToReserves(poolId);

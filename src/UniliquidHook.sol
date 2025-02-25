@@ -52,6 +52,7 @@ contract UniliquidHook is BaseHook {
 
     /// @notice Initially added amount of both stablecoins to create k. Initial k is thus 100e18
     uint256 public constant AMOUNT_ADDED_INITIALLY = 10e18;
+    uint256 public constant NORMALIZED_DECIMALS = 18; // Base decimals for internal calculations
     uint256 public constant FEE_AMOUNT = 3000; // 0.3%
 
     uint256 private constant MAX_BINARY_ITERATIONS = 30; // a single binary search iteration is approximately 3000 gas (0.0009 USD)
@@ -130,7 +131,11 @@ contract UniliquidHook is BaseHook {
             tokenToLiquid[currency1] = new Uniliquid(name, symbol, address(this));
         }
 
-        addLiquidity(sender, key, currency0, currency1, AMOUNT_ADDED_INITIALLY);
+        // Convert AMOUNT_ADDED_INITIALLY to the appropriate decimals for each token
+        uint256 amount0 = scaleAmount(AMOUNT_ADDED_INITIALLY, NORMALIZED_DECIMALS, ERC20(currency0).decimals());
+        uint256 amount1 = scaleAmount(AMOUNT_ADDED_INITIALLY, NORMALIZED_DECIMALS, ERC20(currency1).decimals());
+
+        addLiquidity(sender, key, currency0, currency1, amount0, amount1);
 
         return BaseHook.beforeInitialize.selector;
     }
@@ -141,12 +146,14 @@ contract UniliquidHook is BaseHook {
         returns (bytes4, BeforeSwapDelta, uint24)
     {
         address sender = abi.decode(data, (address));
+        address currency0 = Currency.unwrap(key.currency0);
+        address currency1 = Currency.unwrap(key.currency1);
 
         uint256 reserve0 = poolToReserves[key.toId()].currency0Reserves;
         uint256 reserve1 = poolToReserves[key.toId()].currency1Reserves;
 
         if (reserve0 == 0 || reserve1 == 0) {
-            revert InsufficientReserves(Currency.unwrap(key.currency0), Currency.unwrap(key.currency1));
+            revert InsufficientReserves(currency0, currency1);
         }
 
         uint256 k = K(reserve0, reserve1);
@@ -159,28 +166,37 @@ contract UniliquidHook is BaseHook {
         uint256 amountIn = uint256(amountInI); // TODO: change when exactOut is supported
 
         if (params.zeroForOne) {
-            // swap token0 for token1
-            uint256 amountOut = binarySearchExactIn(k, reserve1, reserve0, amountIn);
-            amountOut = applyFee(amountOut);
+            // Normalize input amount
+            uint256 normalizedIn = scaleAmount(amountIn, ERC20(currency0).decimals(), NORMALIZED_DECIMALS);
+            
+            // Calculate output in normalized decimals
+            uint256 normalizedOut = binarySearchExactIn(k, reserve1, reserve0, normalizedIn);
+            normalizedOut = applyFee(normalizedOut);
+            
+            // Convert output back to token decimals
+            uint256 amountOut = scaleAmount(normalizedOut, NORMALIZED_DECIMALS, ERC20(currency1).decimals());
 
-            ERC20(Currency.unwrap(key.currency0)).transferFrom(sender, address(this), amountIn);
-            ERC20(Currency.unwrap(key.currency1)).transfer(sender, amountOut);
+            ERC20(currency0).transferFrom(sender, address(this), amountIn);
+            ERC20(currency1).transfer(sender, amountOut);
 
-            poolToReserves[key.toId()].currency0Reserves += amountIn;
-            poolToReserves[key.toId()].currency1Reserves -= amountOut;
+            poolToReserves[key.toId()].currency0Reserves += normalizedIn;
+            poolToReserves[key.toId()].currency1Reserves -= normalizedOut;
         } else {
-            // swap token1 for token0
-            uint256 amountOut = binarySearchExactIn(k, reserve0, reserve1, amountIn);
-            amountOut = applyFee(amountOut);
+            // Similar logic for token1 to token0 swap
+            uint256 normalizedIn = scaleAmount(amountIn, ERC20(currency1).decimals(), NORMALIZED_DECIMALS);
+            
+            uint256 normalizedOut = binarySearchExactIn(k, reserve0, reserve1, normalizedIn);
+            normalizedOut = applyFee(normalizedOut);
+            
+            uint256 amountOut = scaleAmount(normalizedOut, NORMALIZED_DECIMALS, ERC20(currency0).decimals());
 
-            ERC20(Currency.unwrap(key.currency1)).transferFrom(sender, address(this), amountIn);
-            ERC20(Currency.unwrap(key.currency0)).transfer(sender, amountOut);
+            ERC20(currency1).transferFrom(sender, address(this), amountIn);
+            ERC20(currency0).transfer(sender, amountOut);
 
-            poolToReserves[key.toId()].currency0Reserves -= amountOut;
-            poolToReserves[key.toId()].currency1Reserves += amountIn;
+            poolToReserves[key.toId()].currency0Reserves -= normalizedOut;
+            poolToReserves[key.toId()].currency1Reserves += normalizedIn;
         }
 
-        // no-op v3 swap hook
         return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(amountIn.toInt128(), 0), 0);
     }
 
@@ -202,21 +218,34 @@ contract UniliquidHook is BaseHook {
         revert RemoveLiquidityDirectlyFromHook();
     }
 
-    function addLiquidity(address sender, PoolKey calldata key, address currency0, address currency1, uint256 amount) 
+    function addLiquidity(
+        address sender, 
+        PoolKey calldata key, 
+        address currency0, 
+        address currency1, 
+        uint256 amount0,
+        uint256 amount1
+    ) 
         public 
         onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1))
         reentrancyGuard
     {
-        ERC20(currency0).transferFrom(sender, address(this), amount);
-        ERC20(currency1).transferFrom(sender, address(this), amount);
+        // Convert amounts to normalized decimals for internal accounting
+        uint256 normalized0 = scaleAmount(amount0, ERC20(currency0).decimals(), NORMALIZED_DECIMALS);
+        uint256 normalized1 = scaleAmount(amount1, ERC20(currency1).decimals(), NORMALIZED_DECIMALS);
 
-        tokenToLiquid[currency0].mint(sender, amount);
-        tokenToLiquid[currency1].mint(sender, amount);
+        ERC20(currency0).transferFrom(sender, address(this), amount0);
+        ERC20(currency1).transferFrom(sender, address(this), amount1);
 
-        poolToReserves[key.toId()].currency0Reserves += amount;
-        poolToReserves[key.toId()].currency1Reserves += amount;
+        // Mint liquid tokens using normalized amounts
+        tokenToLiquid[currency0].mint(sender, normalized0);
+        tokenToLiquid[currency1].mint(sender, normalized1);
 
-        emit LiquidityAdded(currency0, currency1, amount, amount);
+        // Store normalized reserves
+        poolToReserves[key.toId()].currency0Reserves += normalized0;
+        poolToReserves[key.toId()].currency1Reserves += normalized1;
+
+        emit LiquidityAdded(currency0, currency1, amount0, amount1);
     }
 
     function removeLiquidity(address sender, PoolKey calldata key, address currency0, address currency1, uint256 amount)
@@ -298,5 +327,22 @@ contract UniliquidHook is BaseHook {
 
     function K(uint256 reserve0, uint256 reserve1) internal pure returns (uint256) {
         return reserve0 * reserve1 * (reserve0**2 + reserve1**2);
+    }
+
+    /// @notice Scales an amount from one decimal precision to another
+    /// @param amount The amount to scale
+    /// @param fromDecimals The current decimal precision
+    /// @param toDecimals The target decimal precision
+    /// @return The scaled amount
+    function scaleAmount(uint256 amount, uint256 fromDecimals, uint256 toDecimals) internal pure returns (uint256) {
+        if (fromDecimals == toDecimals) {
+            return amount;
+        }
+        
+        if (fromDecimals > toDecimals) {
+            return amount / (10 ** (fromDecimals - toDecimals));
+        }
+        
+        return amount * (10 ** (toDecimals - fromDecimals));
     }
 }
