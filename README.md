@@ -109,3 +109,4 @@ Currently, the `MAX_BINARY_ITERATIONS` is set to 30, and the `ERROR_TOLERANCE` i
 - [X] Adapt the contract for tokens with different decimals.
 - [ ] Add support for exact out swaps.
 - [ ] Add support for single-asset redeem.
+- [ ] Refactor the code so that there is no need to provide sender address as hook data (swap deltas).
