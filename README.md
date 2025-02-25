@@ -2,6 +2,8 @@
 
 ![Banner!](assets/uniliquids-img.png)
 
+## Introduction
+
 This is a hook for Uniswap V4 that allows LPs to liquidize their liquidity deposited into stablecoin-to-stablecoin pools. These liquid tokens are called "Uniliquids".
 
 Example: if a user deposits 1000 USDC into the pool, the hook will mint a uniliquid USDC (`1000 ulUSDC`) token to this user.
