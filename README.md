@@ -115,10 +115,10 @@ Currently, the `MAX_BINARY_ITERATIONS` is set to 30, and the `ERROR_TOLERANCE` i
 
 First, set all the required `.env` and `script/base` variables. Then, there are two ways to deploy the hook:
 
-1. The quick way: `make deploy-all`
+1. The quick way: `make deploy-all` (make sure `script/base` is set correctly)
 2. The manual way:
+    - Deploy the mock tokens: `make deploy-mock-tokens` (Optional)
     - Deploy the hook: `make deploy-hook`
-    - Deploy the mock tokens: `make deploy-mock-tokens`
     - Deploy the pool with initial liquidity: `make deploy-pool-with-initial-liquidity`
 
 ### Funding the Sender (Optional, only for testing)
@@ -141,10 +141,12 @@ This will perform a swap of 1 USDC to USDT.
 
 ## Testnet deployments
 
-The hook is deployed on Unichain Sepolia with the following addresses:
+Deployment artifacts:
 
-- Hook: `0xfD51cB09A99dEE082B88870d58AdFF42A3976a80`
-- Mock USDC: `0x9A633a7F11f61658E161A432A013507cF1960F96`
-- Mock USDT: `0x0702d07EFD2518921ae738C74BECb5e24e47F662`
+- Hook: `0x9a67De9e4ac09f3E09C1B7827D333B364a946A80` (Explorer: `https://unichain-sepolia.blockscout.com/address/0x9a67De9e4ac09f3E09C1B7827D333B364a946A80`)
+- Mock USDC: `0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6` (Explorer: `https://unichain-sepolia.blockscout.com/token/0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6`)
+- Mock USDT: `0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122` (Explorer: `https://unichain-sepolia.blockscout.com/token/0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122`)
+- Uniliquid USDC / USDC (see `tokens` section): `https://unichain-sepolia.blockscout.com/address/0x2767D3d7A6A266CEEA60C6f603E114F95476D8bB?tab=tokens`
+- Swap Example: `https://unichain-sepolia.blockscout.com/tx/0x23e6be00f9a7febc57834f60ac0c11b28bc62c979e7ee3a91462e0cde41ab272`
 
-These can also be found in the `broadcast-unichain-sepolia` folder.
+These can also be found in the `broadcast-sepolia` folder.

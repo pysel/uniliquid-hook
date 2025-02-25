@@ -1,10 +1,10 @@
 include .env
 
+deploy-mock-tokens:
+	forge script script/mocks/MockER20.s.sol:MockTokenScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
+
 deploy-hook:
 	forge script script/00_Uniliquid.s.sol:UniliquidHookScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
-
-deploy-mock-tokens:
-	forge script script/mocks/MockER20.s.sol:MockTokenScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender 0x2767D3d7A6A266CEEA60C6f603E114F95476D8bB
 
 deploy-pool-with-initial-liquidity:
 	forge script script/01_CreatePoolAndMintLiquidity.s.sol:CreatePoolAndMintLiquidityScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
