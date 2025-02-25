@@ -61,7 +61,7 @@ contract UniliquidHook is BaseHook {
     /// @notice Prefix for the symbol of the uniliquid erc-20 stablecoin
     string public constant LIQUID_TOKEN_SYMBOL_PREFIX = "ul";
     /// @notice Prefix for the name of the uniliquid erc-20 stablecoin
-    string public constant LIQUID_TOKEN_NAME_PREFIX = "Uniliquid";
+    string public constant LIQUID_TOKEN_NAME_PREFIX = "Uniliquid ";
 
     /// @notice Initially added amount of both stablecoins to create k. Initial k is thus 100e18
     uint256 public constant AMOUNT_ADDED_INITIALLY = 10e18;
