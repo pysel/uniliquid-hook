@@ -143,10 +143,10 @@ This will perform a swap of 1 USDC to USDT.
 
 Deployment artifacts:
 
-- Hook: `0x9a67De9e4ac09f3E09C1B7827D333B364a946A80` (Explorer: `https://unichain-sepolia.blockscout.com/address/0x9a67De9e4ac09f3E09C1B7827D333B364a946A80`)
-- Mock USDC: `0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6` (Explorer: `https://unichain-sepolia.blockscout.com/token/0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6`)
-- Mock USDT: `0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122` (Explorer: `https://unichain-sepolia.blockscout.com/token/0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122`)
-- Uniliquid USDC / USDC (see `tokens` section): `https://unichain-sepolia.blockscout.com/address/0x2767D3d7A6A266CEEA60C6f603E114F95476D8bB?tab=tokens`
-- Swap Example: `https://unichain-sepolia.blockscout.com/tx/0x23e6be00f9a7febc57834f60ac0c11b28bc62c979e7ee3a91462e0cde41ab272`
+- Hook: `0x9a67De9e4ac09f3E09C1B7827D333B364a946A80` ([Explorer](https://unichain-sepolia.blockscout.com/address/0x9a67De9e4ac09f3E09C1B7827D333B364a946A80))
+- Mock USDC: `0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6` ([Explorer](https://unichain-sepolia.blockscout.com/token/0xd6d150D27095Adce6f84FB1CeEc6A00C5F2645F6))
+- Mock USDT: `0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122` ([Explorer](https://unichain-sepolia.blockscout.com/token/0x92d32Daf42A0B08b275A2D7cbed1CEA2D086a122))
+- Uniliquid USDC / USDC (see `tokens` section): [Explorer](https://unichain-sepolia.blockscout.com/address/0x2767D3d7A6A266CEEA60C6f603E114F95476D8bB?tab=tokens)
+- Swap Example: [Explorer](https://unichain-sepolia.blockscout.com/tx/0x23e6be00f9a7febc57834f60ac0c11b28bc62c979e7ee3a91462e0cde41ab272)
 
 These can also be found in the `broadcast-sepolia` folder.
