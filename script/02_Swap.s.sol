@@ -49,8 +49,8 @@ contract SwapScript is Script, Constants, Config {
         bool zeroForOne = true;
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
-            amountSpecified: 1e18,
-            sqrtPriceLimitX96: zeroForOne ? MIN_PRICE_LIMIT : MAX_PRICE_LIMIT // unlimited impact
+            amountSpecified: 100e18,
+            sqrtPriceLimitX96: 0 // unlimited impact
         });
 
         // in v4, users have the option to receieve native ERC20s or wrapped ERC1155 tokens

@@ -22,3 +22,6 @@ fund-me:
 
 add-liquidity:
 	forge script script/02_AddLiquidity.s.sol:AddLiquidityScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
+
+burn:
+	forge script script/testnet/BurnERC20.s.sol:BurnERC20Script --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
