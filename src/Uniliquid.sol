@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+/// @title Uniliquid
+/// @notice A stablecoin liquid representation that is created by the hook
 contract Uniliquid is ERC20 {
     address public hook;
 
