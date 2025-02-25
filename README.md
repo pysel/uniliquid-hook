@@ -4,11 +4,11 @@
 
 ## Introduction
 
-This is a hook for Uniswap V4 that allows LPs to liquidize their liquidity deposited into stablecoin-to-stablecoin pools. These liquid tokens are called "Uniliquids".
+This is a hook for Uniswap V4 that allows LPs to liquidize their liquidity deposited into stablecoin-to-stablecoin pools. These liquid tokens are called "Uniliquids". The objective of this hook is to provide a way for LPs to provide liquidity to stablecoin-to-stablecoin pools, earning the yield, without losing the access to their liquidity.
 
 Example: if a user deposits 1000 USDC into the pool, the hook will mint a uniliquid USDC (`1000 ulUSDC`) token to this user.
 
-Uniliquids are ERC20 tokens that are pegged to the stablecoin in the pool. The price of the uniliquid token is determined by the price of the stablecoin in the pool.
+Uniliquids are ERC20 tokens that are pegged to the stablecoin in the pool, thus essentially preserving LPs' liquidity. The price of the uniliquid token is determined by the price of the stablecoin in the pool.
 
 Uniliquids are minted in the ratio of 1:1 with the stablecoin in the pool.
 
@@ -110,3 +110,39 @@ Currently, the `MAX_BINARY_ITERATIONS` is set to 30, and the `ERROR_TOLERANCE` i
 - [ ] Add support for exact out swaps.
 - [ ] Add support for single-asset redeem.
 - [ ] Refactor the code so that there is no need to provide sender address as hook data (swap deltas).
+
+## Deploying the hook
+
+First, set all the required `.env` and `script/base` variables. Then, there are two ways to deploy the hook:
+
+1. The quick way: `make deploy-all`
+2. The manual way:
+    - Deploy the hook: `make deploy-hook`
+    - Deploy the mock tokens: `make deploy-mock-tokens`
+    - Deploy the pool with initial liquidity: `make deploy-pool-with-initial-liquidity`
+
+### Funding the Sender (Optional, only for testing)
+
+To fund the sender with USDC and USDT on Unichain Sepolia, run the following command:
+
+```bash
+make fund-me
+```
+
+### Basic Swap
+
+To perform a basic swap, run the following command:
+
+```bash
+make swap
+```
+
+This will perform a swap of 1 USDC to USDT.
+
+## Testnet deployments
+
+The hook is deployed on Unichain Sepolia with the following addresses:
+
+- Hook: `0xfD51cB09A99dEE082B88870d58AdFF42A3976a80`
+- Mock USDC: `0x9A633a7F11f61658E161A432A013507cF1960F96`
+- Mock USDT: `0x0702d07EFD2518921ae738C74BECb5e24e47F662`

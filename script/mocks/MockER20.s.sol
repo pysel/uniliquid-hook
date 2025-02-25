@@ -13,8 +13,12 @@ contract MockTokenScript is Script {
 
     function run() public {
         vm.startBroadcast();
-        new MockToken("MockTokenA", "MOCKA");
-        new MockToken("MockTokenB", "MOCKB");
+        MockToken mockTokenA = new MockToken("MockTokenA", "MOCKA");
+        MockToken mockTokenB = new MockToken("MockTokenB", "MOCKB");
+
+        mockTokenA.mint(msg.sender, 1000000000000000000000000);
+        mockTokenB.mint(msg.sender, 1000000000000000000000000);
+
         vm.stopBroadcast();
     }
 }

@@ -9,11 +9,12 @@ import {Actions} from "v4-periphery/src/libraries/Actions.sol";
 import {LiquidityAmounts} from "v4-core/test/utils/LiquidityAmounts.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";
 import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {UniliquidHook} from "../src/UniliquidHook.sol";
 
 import {Constants} from "./base/Constants.sol";
 import {Config} from "./base/Config.sol";
 
-contract CreatePoolAndAddLiquidityScript is Script, Constants, Config {
+contract CreatePoolAndMintLiquidityScript is Script, Constants, Config {
     using CurrencyLibrary for Currency;
 
     /////////////////////////////////////
@@ -28,9 +29,7 @@ contract CreatePoolAndAddLiquidityScript is Script, Constants, Config {
     // starting price of the pool, in sqrtPriceX96
     uint160 startingPrice = 79228162514264337593543950336; // floor(sqrt(1) * 2^96)
 
-    // --- liquidity position configuration --- //
-    uint256 public token0Amount = 1e18;
-    uint256 public token1Amount = 1e18;
+    uint160 public constant SQRT_PRICE_1_1 = 79228162514264337593543950336;
 
     // range of the position
     int24 tickLower = -600; // must be a multiple of tickSpacing
@@ -38,47 +37,14 @@ contract CreatePoolAndAddLiquidityScript is Script, Constants, Config {
     /////////////////////////////////////
 
     function run() external {
-        // tokens should be sorted
-        PoolKey memory pool = PoolKey({
-            currency0: currency0,
-            currency1: currency1,
-            fee: lpFee,
-            tickSpacing: tickSpacing,
-            hooks: hookContract
-        });
-        bytes memory hookData = new bytes(0);
-
+        PoolKey memory key = PoolKey(currency0, currency1, 3000, 60, hookContract);
         // --------------------------------- //
 
-        // Converts token amounts to liquidity units
-        uint128 liquidity = LiquidityAmounts.getLiquidityForAmounts(
-            startingPrice,
-            TickMath.getSqrtPriceAtTick(tickLower),
-            TickMath.getSqrtPriceAtTick(tickUpper),
-            token0Amount,
-            token1Amount
-        );
-
-        // slippage limits
-        uint256 amount0Max = token0Amount + 1 wei;
-        uint256 amount1Max = token1Amount + 1 wei;
-
-        (bytes memory actions, bytes[] memory mintParams) =
-            _mintLiquidityParams(pool, tickLower, tickUpper, liquidity, amount0Max, amount1Max, address(this), hookData);
-
-        // multicall parameters
-        bytes[] memory params = new bytes[](2);
-
-        // initialize pool
-        params[0] = abi.encodeWithSelector(posm.initializePool.selector, pool, startingPrice, hookData);
-
-        // mint liquidity
-        params[1] = abi.encodeWithSelector(
-            posm.modifyLiquidities.selector, abi.encode(actions, mintParams), block.timestamp + 60
-        );
-
         // if the pool is an ETH pair, native tokens are to be transferred
-        uint256 valueToPass = currency0.isAddressZero() ? amount0Max : 0;
+
+        vm.startBroadcast();
+        allowTokens();
+        vm.stopBroadcast();
 
         vm.startBroadcast();
         tokenApprovals();
@@ -86,37 +52,20 @@ contract CreatePoolAndAddLiquidityScript is Script, Constants, Config {
 
         // multicall to atomically create pool & add liquidity
         vm.broadcast();
-        posm.multicall{value: valueToPass}(params);
+        POOLMANAGER.initialize(key, SQRT_PRICE_1_1);
     }
 
-    /// @dev helper function for encoding mint liquidity operation
-    /// @dev does NOT encode SWEEP, developers should take care when minting liquidity on an ETH pair
-    function _mintLiquidityParams(
-        PoolKey memory poolKey,
-        int24 _tickLower,
-        int24 _tickUpper,
-        uint256 liquidity,
-        uint256 amount0Max,
-        uint256 amount1Max,
-        address recipient,
-        bytes memory hookData
-    ) internal pure returns (bytes memory, bytes[] memory) {
-        bytes memory actions = abi.encodePacked(uint8(Actions.MINT_POSITION), uint8(Actions.SETTLE_PAIR));
-
-        bytes[] memory params = new bytes[](2);
-        params[0] = abi.encode(poolKey, _tickLower, _tickUpper, liquidity, amount0Max, amount1Max, recipient, hookData);
-        params[1] = abi.encode(poolKey.currency0, poolKey.currency1);
-        return (actions, params);
+    function allowTokens() public {
+        UniliquidHook(address(hookContract)).addAllowedStablecoin(address(usdc));
+        UniliquidHook(address(hookContract)).addAllowedStablecoin(address(usdt));
     }
 
     function tokenApprovals() public {
         if (!currency0.isAddressZero()) {
-            token0.approve(address(PERMIT2), type(uint256).max);
-            PERMIT2.approve(address(token0), address(posm), type(uint160).max, type(uint48).max);
+            usdc.approve(address(hookContract), type(uint256).max);
         }
         if (!currency1.isAddressZero()) {
-            token1.approve(address(PERMIT2), type(uint256).max);
-            PERMIT2.approve(address(token1), address(posm), type(uint160).max, type(uint48).max);
+            usdt.approve(address(hookContract), type(uint256).max);
         }
     }
 }
