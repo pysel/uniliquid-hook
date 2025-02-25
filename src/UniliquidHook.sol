@@ -72,8 +72,8 @@ contract UniliquidHook is BaseHook {
     /// @notice Maximum number of binary search iterations for finding the amount out of a swap
     /// @dev Each iteration is worthapproximately 3000 gas (0.0009 USD)
     uint256 private constant MAX_BINARY_ITERATIONS = 30; 
-    /// @notice Error tolerance for the constant k from the guessed amount out to the true amount out (0.01%)
-    uint256 private constant ERROR_TOLERANCE = 1e69; 
+    /// @notice Error tolerance for the constant k from the guessed amount out to the true amount out (0.0001%)
+    uint256 private constant ERROR_TOLERANCE = 1e12;
 
     /// @notice Mapping of allowed stablecoins
     mapping(address => ERC20) public allowedStablecoins;
@@ -397,7 +397,7 @@ contract UniliquidHook is BaseHook {
     /// @return The constant k
     function binK(uint256 reserveOut, uint256 guessOut, uint256 reserveInNew) internal pure returns (uint256) {
         uint256 reserveOutNew = reserveOut - guessOut;
-        return reserveOutNew * reserveInNew * (reserveOutNew ** 2 + reserveInNew ** 2);
+        return K(reserveOutNew, reserveInNew);
     }
 
     /// @notice Computes the constant k from reserves
@@ -406,7 +406,13 @@ contract UniliquidHook is BaseHook {
     /// @param reserve1 The amount of currency1 in the pool
     /// @return The constant k
     function K(uint256 reserve0, uint256 reserve1) internal pure returns (uint256) {
-        return reserve0 * reserve1 * (reserve0**2 + reserve1**2);
+        uint256 denominator = 10 ** NORMALIZED_DECIMALS;
+
+        uint256 xy = reserve0 * reserve1 / denominator;
+        uint256 x2 = reserve0 * reserve0 / denominator;
+        uint256 y2 = reserve1 * reserve1 / denominator;
+
+        return xy * (x2 + y2);
     }
 
     /// @notice Scales an amount from one decimal precision to another
