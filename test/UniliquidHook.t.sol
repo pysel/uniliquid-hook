@@ -28,6 +28,7 @@ beforeAddLiquidity: true,
 beforeRemoveLiquidity: true,
 beforeSwap: true,
 afterSwap: true,
+beforeSwapReturnDelta: true,
 */
 
 contract UniliquidHookTest is Test, Fixtures {
@@ -44,7 +45,7 @@ contract UniliquidHookTest is Test, Fixtures {
     int24 tickLower;
     int24 tickUpper;
     uint256 constant SWAP_ERR_TOLERANCE = 1e12; // within a 0.0001% of the true amount out
-    bytes hookData = abi.encode(address(this));
+    bytes hookData = abi.encode();
 
     function setUp() public {
         // creates the pool manager, utility routers, and test tokens
@@ -57,7 +58,8 @@ contract UniliquidHookTest is Test, Fixtures {
         address flags = address(
             uint160(
                 Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | 
-                Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_INITIALIZE_FLAG 
+                Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_INITIALIZE_FLAG |
+                Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
             ) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
         );
         bytes memory constructorArgs = abi.encode(manager); //Add all the necessary constructor arguments from the hook
@@ -78,6 +80,15 @@ contract UniliquidHookTest is Test, Fixtures {
 
     function approveHook(Currency currency, uint256 amount) public {
         ERC20(Currency.unwrap(currency)).approve(address(hook), amount);
+        ERC20(Currency.unwrap(currency)).approve(address(swapRouter), amount);
+        ERC20(Currency.unwrap(currency)).approve(address(manager), amount);
+    }
+
+    function addLiquidity() public {
+        approveHook(currency0, hook.AMOUNT_ADDED_INITIALLY());
+        approveHook(currency1, hook.AMOUNT_ADDED_INITIALLY());
+
+        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), hook.AMOUNT_ADDED_INITIALLY(), hook.AMOUNT_ADDED_INITIALLY());
     }
 
     function testAddLiquidity() public {
@@ -128,6 +139,9 @@ contract UniliquidHookTest is Test, Fixtures {
 
     function testRemoveLiquidity() public {
         uint256 amount = 1e18;
+
+        addLiquidity();
+
         approveHook(currency0, amount);
         approveHook(currency1, amount);
 
@@ -173,17 +187,19 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function testSwapWithRemoveLiquidity() public {
-        uint256 amount = 5e18;
+        int256 amount = int256(-5e18);
         bool zeroForOne = true;
 
-        approveHook(currency0, amount);
-        
+        addLiquidity();
+
+        approveHook(currency0, uint256(-amount));
+
         // swap first 
         swap(key, zeroForOne, int256(amount), hookData);
 
         // then remove liquidity
-        approveHook(currency0, amount);
-        approveHook(currency1, amount);
+        approveHook(currency0, uint256(-amount));
+        approveHook(currency1, uint256(-amount));
 
         uint256 redemptionAmount = 1e18;
 
@@ -253,10 +269,12 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function testSwapGasCost() public {
-        int256 amountIn = int256(1e18);
+        addLiquidity();
+
+        int256 amountIn = int256(-1e18);
         bool zeroForOne = false;
 
-        approveHook(currency1, uint256(amountIn));
+        approveHook(currency1, uint256(-amountIn));
         
         uint256 gasBefore = gasleft();
         swap(key, zeroForOne, amountIn, hookData);
@@ -268,10 +286,12 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function testSwaps() public {
-        int256 amountIn = int256(1e18);
+        int256 amountIn = int256(-1e18);
         bool zeroForOne = false;
 
-        approveHook(currency1, uint256(amountIn));
+        addLiquidity();
+
+        approveHook(currency1, uint256(-amountIn));
 
         uint256 currency0BalanceBefore = currency0.balanceOf(address(this));
         uint256 currency1BalanceBefore = currency1.balanceOf(address(this));
@@ -290,7 +310,7 @@ contract UniliquidHookTest is Test, Fixtures {
         uint256 currency1BalanceChange = currency1BalanceBefore - currency1BalanceAfter;
 
         assertTrue(currency0BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
-        assertEq(currency1BalanceChange, uint256(amountIn));
+        assertEq(currency1BalanceChange, uint256(-amountIn));
 
         // oneForZero Swap
         zeroForOne = true;
@@ -314,10 +334,12 @@ contract UniliquidHookTest is Test, Fixtures {
         currency1BalanceChange = currency1BalanceAfter - currency1BalanceBefore;
 
         assertTrue(currency1BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
-        assertEq(currency0BalanceChange, uint256(amountIn));
+        assertEq(currency0BalanceChange, uint256(-amountIn));
     }
 
-    function testUniliquidTokensCreated() public view {
+    function testUniliquidTokensCreated() public {
+        addLiquidity();
+
         address ulCurrency0 = address(hook.tokenToLiquid(Currency.unwrap(currency0)));
         address ulCurrency1 = address(hook.tokenToLiquid(Currency.unwrap(currency1)));
 
