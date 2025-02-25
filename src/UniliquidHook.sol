@@ -121,7 +121,7 @@ contract UniliquidHook is BaseHook, SafeCallback {
         reentrancyGuard_ = false;
     }
 
-    constructor(IPoolManager _poolManager) SafeCallback(_poolManager) {}
+    constructor(IPoolManager manager) SafeCallback(manager) {}
 
     function _poolManager() internal view override returns (IPoolManager) { 
         return poolManager;
@@ -160,11 +160,10 @@ contract UniliquidHook is BaseHook, SafeCallback {
     /// @notice The hook that initializes the pool
     /// @notice During the initialization, the hook creates the uniliquid erc-20 stablecoins if they are allowed, but non-existent yet
     /// @notice Adds the initial liquidity to the pool
-    /// @param sender The address of the sender
     /// @param key The pool key
     /// @return Selector of the hook
     function _beforeInitialize(
-        address sender,
+        address,
         PoolKey calldata key,
         uint160
     )
@@ -212,30 +211,15 @@ contract UniliquidHook is BaseHook, SafeCallback {
             );
         }
 
-        // Convert AMOUNT_ADDED_INITIALLY to the appropriate decimals for each token
-        // uint256 amount0 = scaleAmount(
-        //     AMOUNT_ADDED_INITIALLY,
-        //     NORMALIZED_DECIMALS,
-        //     ERC20(currency0).decimals()
-        // );
-        // uint256 amount1 = scaleAmount(
-        //     AMOUNT_ADDED_INITIALLY,
-        //     NORMALIZED_DECIMALS,
-        //     ERC20(currency1).decimals()
-        // );
-
-        // addLiquidity(sender, key, currency0, currency1, amount0, amount1);
-
         return BaseHook.beforeInitialize.selector;
     }
 
     /// @notice The no-op hook that performs a swap on a custom CFMM curve.
-    /// @param sender The address of the sender
     /// @param key The pool key
     /// @param params The swap parameters
     /// @return The no-op return
     function _beforeSwap(
-        address sender,
+        address,
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
         bytes calldata
