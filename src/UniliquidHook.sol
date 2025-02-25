@@ -386,7 +386,7 @@ contract UniliquidHook is BaseHook {
     /// @param amount The amount to apply the fee to
     /// @return The amount after the fee is applied
     function applyFee(uint256 amount) internal pure returns (uint256) {
-        return amount * (100000 - FEE_AMOUNT) / 100000;
+        return amount * (1000000 - FEE_AMOUNT) / 1000000;
     }
 
     /// @notice Computes k for the binary search guess iteration
@@ -409,10 +409,9 @@ contract UniliquidHook is BaseHook {
         uint256 denominator = 10 ** NORMALIZED_DECIMALS;
 
         uint256 xy = reserve0 * reserve1 / denominator;
-        uint256 x2 = reserve0 * reserve0 / denominator;
-        uint256 y2 = reserve1 * reserve1 / denominator;
+        uint256 x2y2 = (reserve0 * reserve0 + reserve1 * reserve1) / denominator;
 
-        return xy * (x2 + y2);
+        return xy * x2y2;
     }
 
     /// @notice Scales an amount from one decimal precision to another

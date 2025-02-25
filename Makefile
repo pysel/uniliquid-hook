@@ -15,7 +15,7 @@ deploy-all:
 	deploy-pool-with-initial-liquidity
 
 swap:
-	forge script script/02_Swap.s.sol:SwapScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
+	forge script script/03_Swap.s.sol:SwapScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
 
 fund-me:
 	forge script script/testnet/FundERC20.s.sol:FundERC20Script --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)

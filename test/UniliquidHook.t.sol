@@ -278,8 +278,8 @@ contract UniliquidHookTest is Test, Fixtures {
 
         swap(key, zeroForOne, amountIn, hookData);
 
-        // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%2810e18+%2B+1e18%29%2810e18+-+x%29%28%2810e18+%2B+1e18%29%5E2+%2B+%2810e18+-+x%29%5E2%29+%3D+2+*+10e75+
-        uint256 amountOutExpected = 999500518006394112; 
+        // https://www.wolframalpha.com/input?i=find+x+in+%2810e18+%2B+1e18%29%2810e18+-+x%29+%2F+1e18+*%28%2810e18+%2B+1e18%29%5E2+%2B+%2810e18+-+x%29%5E2%29+%2F+1e18+%3D+20000000000000000000000000000000000000000
+        uint256 amountOutExpected = 999500518006395648; 
         amountOutExpected = applyFee(amountOutExpected);
 
         uint256 currency0BalanceAfter = currency0.balanceOf(address(this));
@@ -303,7 +303,7 @@ contract UniliquidHookTest is Test, Fixtures {
 
         // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%289030484497534384903+%2B+1e18%29%2811e18+-+x%29%28%289030484497534384903+%2B+1e18%29%5E2+%2B+%2811e18+-+x%29%5E2%29+%3D+20120336243214102838134569266726391276333431006160704305597000000000000000000
         // this is diferent from the binary search test, because the binary search test does not take into account the fee
-        amountOutExpected = 1000468078245454592; 
+        amountOutExpected = 1000496269222984064; 
         amountOutExpected = applyFee(amountOutExpected);
 
         currency0BalanceAfter = currency0.balanceOf(address(this));
@@ -358,6 +358,6 @@ contract UniliquidHookTest is Test, Fixtures {
     // }
 
     function applyFee(uint256 amount) internal view returns (uint256) {
-        return amount * (100000 - hook.FEE_AMOUNT()) / 100000;
+        return amount * (1000000 - hook.FEE_AMOUNT()) / 1000000;
     }
 }

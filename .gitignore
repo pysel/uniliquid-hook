@@ -20,3 +20,4 @@ node_modules/
 
 # test files
 curve-test.py
+selector-finder.py
