@@ -106,4 +106,6 @@ Currently, the `MAX_BINARY_ITERATIONS` is set to 30, and the `ERROR_TOLERANCE` i
 
 ## TODO List
 
-- [ ] Adapt the contract for tokens with different decimals.
+- [X] Adapt the contract for tokens with different decimals.
+- [ ] Add support for exact out swaps.
+- [ ] Add support for single-asset redeem.
