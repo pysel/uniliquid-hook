@@ -6,7 +6,7 @@
 
 - [Introduction](#introduction)
 - [Testnet Deployments](#testnet-deployments)
-- [Why only stablecoins?](#why-only-stablecoins)
+- [Why Stablecoins?](#why-stablecoins)
 - [Smart Contract Overview](#smart-contract-overview)
   - [Allowed Stablecoins](#allowed-stablecoins)
   - [Pool Initialization](#pool-initialization)
@@ -38,7 +38,7 @@ Deployment artifacts:
 
 These can also be found in the `broadcast-sepolia` folder.
 
-## Why only stablecoins?
+## Why Stablecoins?
 
 Uniswap V4 is built on top of Uniswap V3. Uniswap V3 is a concentrated liquidity protocol that allows LPs to concentrate their liquidity into specific price ranges.
 
