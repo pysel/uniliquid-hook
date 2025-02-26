@@ -111,3 +111,4 @@ This will perform a swap of 1 USDC to USDT. If you wish to configure the swap am
 
 - [ ] Add support for exact out swaps.
 - [ ] Add support for single-asset deposits/redemptions.
+- [ ] Thoroughly test the logic for different decimals stablecoins.
