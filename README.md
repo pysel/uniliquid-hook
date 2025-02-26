@@ -95,10 +95,5 @@ This will perform a swap of 1 USDC to USDT. If you wish to configure the swap am
 
 ## Future Tasks
 
-- [X] Adapt the contract for tokens with different decimals.
 - [ ] Add support for exact out swaps.
 - [ ] Add support for single-asset deposits/redemptions.
-- [X] Refactor the code so that there is no need to provide sender address as hook data (swap deltas).
-- [X] Implement slippage protection.
-- [X] Fix the bug with the `k` value computation overflow.
-- [X] Make fees configurable.

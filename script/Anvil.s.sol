@@ -48,8 +48,9 @@ contract UniliquidHookScript is Script, DeployPermit2 {
         );
 
         // Mine a salt that will produce a hook address with the correct permissions
-        (address hookAddress, bytes32 salt) =
-            HookMiner.find(CREATE2_DEPLOYER, permissions, type(UniliquidHook).creationCode, abi.encode(address(manager)));
+        (address hookAddress, bytes32 salt) = HookMiner.find(
+            CREATE2_DEPLOYER, permissions, type(UniliquidHook).creationCode, abi.encode(address(manager))
+        );
 
         // ----------------------------- //
         // Deploy the hook using CREATE2 //

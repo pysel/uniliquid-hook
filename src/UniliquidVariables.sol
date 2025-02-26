@@ -18,18 +18,10 @@ contract UniliquidVariables {
     error SlippageProtection(uint256 amountOut, uint256 minAmountOut);
 
     /// @notice Event emitted when liquidity is added to the pool
-    event LiquidityAdded(
-        address indexed currency0,
-        address indexed currency1,
-        uint256 amount0,
-        uint256 amount1
-    );
+    event LiquidityAdded(address indexed currency0, address indexed currency1, uint256 amount0, uint256 amount1);
     /// @notice Event emitted when liquidity is removed from the pool
     event LiquidityRemoved(
-        address indexed currency0,
-        address indexed currency1,
-        uint256 amount0Out,
-        uint256 amount1Out
+        address indexed currency0, address indexed currency1, uint256 amount0Out, uint256 amount1Out
     );
 
     /// @notice Per-pool true reserves

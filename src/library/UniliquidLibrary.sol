@@ -28,11 +28,7 @@ library UniliquidLibrary {
     /// @param fromDecimals The current decimal precision
     /// @param toDecimals The target decimal precision
     /// @return The scaled amount
-    function scaleAmount(
-        uint256 amount,
-        uint256 fromDecimals,
-        uint256 toDecimals
-    ) internal pure returns (uint256) {
+    function scaleAmount(uint256 amount, uint256 fromDecimals, uint256 toDecimals) internal pure returns (uint256) {
         if (fromDecimals == toDecimals) {
             return amount;
         }
@@ -49,6 +45,7 @@ library CFMMLibrary {
     using UniliquidLibrary for uint256;
     /// @notice Maximum number of binary search iterations for finding the amount out of a swap
     /// @dev Each iteration is worthapproximately 3000 gas (0.0009 USD)
+
     uint256 public constant MAX_BINARY_ITERATIONS = 30;
     /// @notice Error tolerance for the constant k from the guessed amount out to the true amount out (0.0001%)
     uint256 public constant ERROR_TOLERANCE = 1e12;
@@ -61,12 +58,11 @@ library CFMMLibrary {
     /// @param reserveIn The reserve of the token being swapped in
     /// @param addedIn The amount of the token being swapped in
     /// @return The amount of the token a user should receive from the swap
-    function binarySearchExactIn(
-        uint256 k,
-        uint256 reserveOut,
-        uint256 reserveIn,
-        uint256 addedIn
-    ) internal pure returns (uint256) {
+    function binarySearchExactIn(uint256 k, uint256 reserveOut, uint256 reserveIn, uint256 addedIn)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 reserveInNew = reserveIn + addedIn;
         // Set initial bounds for binary search
         uint256 left = 0;

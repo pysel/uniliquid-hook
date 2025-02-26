@@ -59,9 +59,8 @@ contract UniliquidHookTest is Test, Fixtures {
         // // Deploy the hook to an address with the correct flags
         address flags = address(
             uint160(
-                Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | 
-                Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_INITIALIZE_FLAG |
-                Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
+                Hooks.BEFORE_ADD_LIQUIDITY_FLAG | Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG | Hooks.BEFORE_SWAP_FLAG
+                    | Hooks.BEFORE_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG
             ) ^ (0x4444 << 144) // Namespace the hook to avoid collisions
         );
         bytes memory constructorArgs = abi.encode(manager); //Add all the necessary constructor arguments from the hook
@@ -90,14 +89,21 @@ contract UniliquidHookTest is Test, Fixtures {
         approveHook(currency0, amountAddedInitially);
         approveHook(currency1, amountAddedInitially);
 
-        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amountAddedInitially, amountAddedInitially);
+        hook.addLiquidity(
+            address(this),
+            key,
+            Currency.unwrap(currency0),
+            Currency.unwrap(currency1),
+            amountAddedInitially,
+            amountAddedInitially
+        );
     }
 
     function testAddLiquidity() public {
         uint256 amount = 1e18;
         approveHook(currency0, amount);
         approveHook(currency1, amount);
-        
+
         (uint256 poolReserves0Before, uint256 poolReserves1Before) = hook.poolToReserves(poolId);
 
         uint256 uniliquidAmount0TotalBefore = hook.tokenToLiquid(Currency.unwrap(currency0)).totalSupply();
@@ -165,7 +171,7 @@ contract UniliquidHookTest is Test, Fixtures {
 
         assertEq(poolReserves0After, poolReserves0Before - amount); // FAILS HERE NOW
         assertEq(poolReserves1After, poolReserves1Before - amount);
-        
+
         // verify uniliquid tokens are correctly burned
         uint256 uniliquidAmount0TotalAfter = hook.tokenToLiquid(Currency.unwrap(currency0)).totalSupply();
         uint256 uniliquidAmount1TotalAfter = hook.tokenToLiquid(Currency.unwrap(currency1)).totalSupply();
@@ -179,13 +185,13 @@ contract UniliquidHookTest is Test, Fixtures {
 
         assertEq(uniliquidAmount0After, uniliquidAmount0Before - amount);
         assertEq(uniliquidAmount1After, uniliquidAmount1Before - amount);
-        
+
         // verify stablecoin balances are correctly updated
         uint256 stablecoin0BalanceAfter = currency0.balanceOf(address(this));
         uint256 stablecoin1BalanceAfter = currency1.balanceOf(address(this));
 
         assertEq(stablecoin0BalanceAfter, stablecoin0BalanceBefore + amount);
-        assertEq(stablecoin1BalanceAfter, stablecoin1BalanceBefore + amount); 
+        assertEq(stablecoin1BalanceAfter, stablecoin1BalanceBefore + amount);
     }
 
     function testSwapWithRemoveLiquidity() public {
@@ -196,7 +202,7 @@ contract UniliquidHookTest is Test, Fixtures {
 
         approveHook(currency0, uint256(-amount));
 
-        // swap first 
+        // swap first
         swap(key, zeroForOne, int256(amount), hookData);
 
         // then remove liquidity
@@ -219,7 +225,9 @@ contract UniliquidHookTest is Test, Fixtures {
         uint256 uniliquidAmount0TotalBefore = uniliquid0.totalSupply();
         uint256 uniliquidAmount1TotalBefore = uniliquid1.totalSupply();
 
-        hook.removeLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), redemptionAmount);
+        hook.removeLiquidity(
+            address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), redemptionAmount
+        );
 
         uint256 decimals0 = ERC20(Currency.unwrap(currency0)).decimals();
         uint256 decimals1 = ERC20(Currency.unwrap(currency1)).decimals();
@@ -254,20 +262,20 @@ contract UniliquidHookTest is Test, Fixtures {
 
     function testNativeLiquidityIsNotAllowed() public {
         vm.expectRevert();
-        hook.beforeAddLiquidity(address(this),key, IPoolManager.ModifyLiquidityParams({
-            tickLower: 0,
-            tickUpper: 0,
-            liquidityDelta: 1e18,
-            salt: bytes32(0)
-        }), hookData);
+        hook.beforeAddLiquidity(
+            address(this),
+            key,
+            IPoolManager.ModifyLiquidityParams({tickLower: 0, tickUpper: 0, liquidityDelta: 1e18, salt: bytes32(0)}),
+            hookData
+        );
 
         vm.expectRevert();
-        hook.beforeRemoveLiquidity(address(this),key, IPoolManager.ModifyLiquidityParams({
-            tickLower: 0,
-            tickUpper: 0,
-            liquidityDelta: 1e18,
-            salt: bytes32(0)
-        }), hookData);
+        hook.beforeRemoveLiquidity(
+            address(this),
+            key,
+            IPoolManager.ModifyLiquidityParams({tickLower: 0, tickUpper: 0, liquidityDelta: 1e18, salt: bytes32(0)}),
+            hookData
+        );
     }
 
     function testSwapGasCost() public {
@@ -277,7 +285,7 @@ contract UniliquidHookTest is Test, Fixtures {
         bool zeroForOne = false;
 
         approveHook(currency1, uint256(-amountIn));
-        
+
         uint256 gasBefore = gasleft();
         swap(key, zeroForOne, amountIn, hookData);
         uint256 gasAfter = gasleft();
@@ -301,7 +309,7 @@ contract UniliquidHookTest is Test, Fixtures {
         swap(key, zeroForOne, amountIn, hookData);
 
         // https://www.wolframalpha.com/input?i=find+x+in+%2810e18+%2B+1e18%29%2810e18+-+x%29+%2F+1e18+*%28%2810e18+%2B+1e18%29%5E2+%2B+%2810e18+-+x%29%5E2%29+%2F+1e18+%3D+20000000000000000000000000000000000000000
-        uint256 amountOutExpected = 999500518006395648; 
+        uint256 amountOutExpected = 999500518006395648;
         amountOutExpected = applyFee(amountOutExpected);
 
         uint256 currency0BalanceAfter = currency0.balanceOf(address(this));
@@ -328,7 +336,7 @@ contract UniliquidHookTest is Test, Fixtures {
 
         // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%289030484497534384903+%2B+1e18%29%2811e18+-+x%29%28%289030484497534384903+%2B+1e18%29%5E2+%2B+%2811e18+-+x%29%5E2%29+%3D+20120336243214102838134569266726391276333431006160704305597000000000000000000
         // this is diferent from the binary search test, because the binary search test does not take into account the fee
-        amountOutExpected = 1000496269222984064; 
+        amountOutExpected = 1000496269222984064;
         amountOutExpected = applyFee(amountOutExpected);
 
         currency0BalanceAfter = currency0.balanceOf(address(this));
@@ -364,7 +372,7 @@ contract UniliquidHookTest is Test, Fixtures {
     //     uint256 amountOut = hook.binarySearchExactIn(k, reserve0, reserve1, amountIn);
 
     //     // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%2810e18+%2B+1e18%29%2810e18+-+x%29%28%2810e18+%2B+1e18%29%5E2+%2B+%2810e18+-+x%29%5E2%29+%3D+2+*+10e75+
-    //     uint256 amountOutExpected = 999500518006394112; 
+    //     uint256 amountOutExpected = 999500518006394112;
 
     //     assertTrue(amountOut.within(SWAP_ERR_TOLERANCE, amountOutExpected));
 

@@ -65,7 +65,7 @@ contract SwapScript is Script, Constants, Config {
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
         bytes memory hookData = abi.encode(0); // no slippage protection
-        
+
         console.log("usdt balance before swap", usdt.balanceOf(msg.sender));
         console.log("usdc balance before swap", usdc.balanceOf(msg.sender));
 

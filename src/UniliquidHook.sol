@@ -40,8 +40,8 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         address currency1Address = Currency.unwrap(currency1);
 
         if (
-            allowedStablecoins[currency0Address] == ERC20(address(0)) ||
-            allowedStablecoins[currency1Address] == ERC20(address(0))
+            allowedStablecoins[currency0Address] == ERC20(address(0))
+                || allowedStablecoins[currency1Address] == ERC20(address(0))
         ) {
             revert OnlyStablecoins(currency0Address, currency1Address);
         }
@@ -60,7 +60,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
 
     constructor(IPoolManager manager) SafeCallback(manager) {}
 
-    function _poolManager() internal view override returns (IPoolManager) { 
+    function _poolManager() internal view override returns (IPoolManager) {
         return poolManager;
     }
 
@@ -69,29 +69,23 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     /// @notice - beforeAddLiquidity: true
     /// @notice - beforeRemoveLiquidity: true
     /// @notice - beforeSwap: true
-    function getHookPermissions()
-        public
-        pure
-        override
-        returns (Hooks.Permissions memory)
-    {
-        return
-            Hooks.Permissions({
-                beforeInitialize: true,
-                afterInitialize: false,
-                beforeAddLiquidity: true,
-                afterAddLiquidity: false,
-                beforeRemoveLiquidity: true,
-                afterRemoveLiquidity: false,
-                beforeSwap: true,
-                afterSwap: false,
-                beforeDonate: false,
-                afterDonate: false,
-                beforeSwapReturnDelta: true,
-                afterSwapReturnDelta: false,
-                afterAddLiquidityReturnDelta: false,
-                afterRemoveLiquidityReturnDelta: false
-            });
+    function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
+        return Hooks.Permissions({
+            beforeInitialize: true,
+            afterInitialize: false,
+            beforeAddLiquidity: true,
+            afterAddLiquidity: false,
+            beforeRemoveLiquidity: true,
+            afterRemoveLiquidity: false,
+            beforeSwap: true,
+            afterSwap: false,
+            beforeDonate: false,
+            afterDonate: false,
+            beforeSwapReturnDelta: true,
+            afterSwapReturnDelta: false,
+            afterAddLiquidityReturnDelta: false,
+            afterRemoveLiquidityReturnDelta: false
+        });
     }
 
     /// @notice The hook that initializes the pool
@@ -99,11 +93,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     /// @notice Adds the initial liquidity to the pool
     /// @param key The pool key
     /// @return Selector of the hook
-    function _beforeInitialize(
-        address,
-        PoolKey calldata key,
-        uint160
-    )
+    function _beforeInitialize(address, PoolKey calldata key, uint160)
         internal
         override
         onlyStablecoins(key.currency0, key.currency1)
@@ -114,38 +104,15 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
 
         // creates a uniliquid erc-20 stablecoin if it is allowed, but non-existent yet
         if (tokenToLiquid[currency0] == Uniliquid(address(0))) {
-            string memory symbol = string.concat(
-                LIQUID_TOKEN_SYMBOL_PREFIX,
-                ERC20(currency0).symbol()
-            );
-            string memory name = string.concat(
-                LIQUID_TOKEN_NAME_PREFIX,
-                ERC20(currency0).name()
-            );
-            tokenToLiquid[currency0] = new Uniliquid(
-                name,
-                symbol,
-                address(this)
-            );
+            string memory symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency0).symbol());
+            string memory name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency0).name());
+            tokenToLiquid[currency0] = new Uniliquid(name, symbol, address(this));
         }
 
-        if (
-            tokenToLiquid[Currency.unwrap(key.currency1)] ==
-            Uniliquid(address(0))
-        ) {
-            string memory symbol = string.concat(
-                LIQUID_TOKEN_SYMBOL_PREFIX,
-                ERC20(currency1).symbol()
-            );
-            string memory name = string.concat(
-                LIQUID_TOKEN_NAME_PREFIX,
-                ERC20(currency1).name()
-            );
-            tokenToLiquid[currency1] = new Uniliquid(
-                name,
-                symbol,
-                address(this)
-            );
+        if (tokenToLiquid[Currency.unwrap(key.currency1)] == Uniliquid(address(0))) {
+            string memory symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency1).symbol());
+            string memory name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency1).name());
+            tokenToLiquid[currency1] = new Uniliquid(name, symbol, address(this));
         }
 
         return BaseHook.beforeInitialize.selector;
@@ -155,12 +122,11 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     /// @param key The pool key
     /// @param params The swap parameters
     /// @return The no-op return
-    function _beforeSwap(
-        address,
-        PoolKey calldata key,
-        IPoolManager.SwapParams calldata params,
-        bytes calldata data
-    ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
+    function _beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata params, bytes calldata data)
+        internal
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {
         address currency0 = Currency.unwrap(key.currency0);
         address currency1 = Currency.unwrap(key.currency1);
 
@@ -190,31 +156,20 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         poolManager.mint(address(this), input.toId(), amountIn);
 
         // Normalize input amount
-        uint256 normalizedIn = amountIn.scaleAmount(
-            ERC20(currency0).decimals(),
-            CFMMLibrary.NORMALIZED_DECIMALS
-        );
+        uint256 normalizedIn = amountIn.scaleAmount(ERC20(currency0).decimals(), CFMMLibrary.NORMALIZED_DECIMALS);
 
         // decode the minimum amount out
         uint256 minAmountOut = abi.decode(data, (uint256));
 
         // Calculate output in normalized decimals
-        uint256 normalizedOut = CFMMLibrary.binarySearchExactIn(
-            k,
-            reserveOut,
-            reserveIn,
-            normalizedIn
-        );
+        uint256 normalizedOut = CFMMLibrary.binarySearchExactIn(k, reserveOut, reserveIn, normalizedIn);
 
         // apply fee
         normalizedOut = normalizedOut.applyFee(key.fee);
 
         // Convert output back to token decimals
-        uint256 amountOut = normalizedOut.scaleAmount(
-            CFMMLibrary.NORMALIZED_DECIMALS,
-            ERC20(currency1).decimals()
-        );
-        
+        uint256 amountOut = normalizedOut.scaleAmount(CFMMLibrary.NORMALIZED_DECIMALS, ERC20(currency1).decimals());
+
         // check if the output amount is less than the minimum amount out
         if (amountOut < minAmountOut) {
             revert SlippageProtection(amountOut, minAmountOut);
@@ -235,12 +190,12 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     }
 
     /// @notice The disabled native Uniswap V4 add liquidity functionality
-    function _beforeAddLiquidity(
-        address,
-        PoolKey calldata,
-        IPoolManager.ModifyLiquidityParams calldata,
-        bytes calldata
-    ) internal pure override returns (bytes4) {
+    function _beforeAddLiquidity(address, PoolKey calldata, IPoolManager.ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        pure
+        override
+        returns (bytes4)
+    {
         revert AddLiquidityDirectlyToHook();
     }
 
@@ -269,20 +224,10 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         address currency1,
         uint256 amount0,
         uint256 amount1
-    )
-        public
-        onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1))
-        reentrancyGuard
-    {
+    ) public onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1)) reentrancyGuard {
         // Convert amounts to normalized decimals for internal accounting
-        uint256 normalized0 = amount0.scaleAmount(
-            ERC20(currency0).decimals(),
-            CFMMLibrary.NORMALIZED_DECIMALS
-        );
-        uint256 normalized1 = amount1.scaleAmount(
-            ERC20(currency1).decimals(),
-            CFMMLibrary.NORMALIZED_DECIMALS
-        );
+        uint256 normalized0 = amount0.scaleAmount(ERC20(currency0).decimals(), CFMMLibrary.NORMALIZED_DECIMALS);
+        uint256 normalized1 = amount1.scaleAmount(ERC20(currency1).decimals(), CFMMLibrary.NORMALIZED_DECIMALS);
 
         // depositing stablecoins to a pool with different normalized amounts is not allowed
         // TODO: this can actually be allowed, we can compute the correct amount here and return change, if any
@@ -304,16 +249,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         // poolManager.mint(address(this), Currency.wrap(currency0).toId(), amount0);
         // poolManager.mint(address(this), Currency.wrap(currency1).toId(), amount1);
 
-        poolManager.unlock(
-            abi.encode(
-                sender,
-                key.currency0,
-                key.currency1,
-                amount0,
-                amount1,
-                true
-            )
-        );
+        poolManager.unlock(abi.encode(sender, key.currency0, key.currency1, amount0, amount1, true));
 
         emit LiquidityAdded(currency0, currency1, amount0, amount1);
     }
@@ -324,13 +260,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     /// @param currency0 The address of the first stablecoin
     /// @param currency1 The address of the second stablecoin
     /// @param amount The amount of each token to remove
-    function removeLiquidity(
-        address sender,
-        PoolKey calldata key,
-        address currency0,
-        address currency1,
-        uint256 amount
-    )
+    function removeLiquidity(address sender, PoolKey calldata key, address currency0, address currency1, uint256 amount)
         external
         onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1))
         reentrancyGuard
@@ -338,66 +268,38 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         tokenToLiquid[currency0].burn(sender, amount);
         tokenToLiquid[currency1].burn(sender, amount);
 
-        uint256 fraction0Out = (amount * 10 ** ERC20(currency0).decimals()) /
-            poolToReserves[key.toId()].currency0Reserves;
-        uint256 fraction1Out = (amount * 10 ** ERC20(currency1).decimals()) /
-            poolToReserves[key.toId()].currency1Reserves;
+        uint256 fraction0Out =
+            (amount * 10 ** ERC20(currency0).decimals()) / poolToReserves[key.toId()].currency0Reserves;
+        uint256 fraction1Out =
+            (amount * 10 ** ERC20(currency1).decimals()) / poolToReserves[key.toId()].currency1Reserves;
 
-        uint256 amount0Out = (fraction0Out *
-            poolToReserves[key.toId()].currency0Reserves) /
-            10 ** ERC20(currency0).decimals();
-        uint256 amount1Out = (fraction1Out *
-            poolToReserves[key.toId()].currency1Reserves) /
-            10 ** ERC20(currency1).decimals();
+        uint256 amount0Out =
+            (fraction0Out * poolToReserves[key.toId()].currency0Reserves) / 10 ** ERC20(currency0).decimals();
+        uint256 amount1Out =
+            (fraction1Out * poolToReserves[key.toId()].currency1Reserves) / 10 ** ERC20(currency1).decimals();
 
         // ERC20(currency0).transfer(sender, amount0Out);
         // ERC20(currency1).transfer(sender, amount1Out);
 
-
         poolToReserves[key.toId()].currency0Reserves -= amount0Out;
         poolToReserves[key.toId()].currency1Reserves -= amount1Out;
 
-        poolManager.unlock(
-            abi.encode(
-                sender,
-                key.currency0,
-                key.currency1,
-                amount0Out,
-                amount1Out,
-                false
-            )
-        );
+        poolManager.unlock(abi.encode(sender, key.currency0, key.currency1, amount0Out, amount1Out, false));
 
         emit LiquidityRemoved(currency0, currency1, amount0Out, amount1Out);
     }
 
-    function _unlockCallback(
-        bytes calldata data
-    ) internal virtual override returns (bytes memory) {
-        (
-            address sender,
-            Currency currency0,
-            Currency currency1,
-            uint256 amount0,
-            uint256 amount1,
-            bool add
-        ) = abi.decode(data, (address, Currency, Currency, uint256, uint256, bool));
+    function _unlockCallback(bytes calldata data) internal virtual override returns (bytes memory) {
+        (address sender, Currency currency0, Currency currency1, uint256 amount0, uint256 amount1, bool add) =
+            abi.decode(data, (address, Currency, Currency, uint256, uint256, bool));
 
         if (add) {
             poolManager.sync(currency0);
-            IERC20(Currency.unwrap(currency0)).transferFrom(
-                sender,
-                address(poolManager),
-                amount0
-            );
+            IERC20(Currency.unwrap(currency0)).transferFrom(sender, address(poolManager), amount0);
             poolManager.settle();
 
             poolManager.sync(currency1);
-            IERC20(Currency.unwrap(currency1)).transferFrom(
-                sender,
-                address(poolManager),
-                amount1
-            );
+            IERC20(Currency.unwrap(currency1)).transferFrom(sender, address(poolManager), amount1);
             poolManager.settle();
 
             // mint ERC6909 to the hook

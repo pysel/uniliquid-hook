@@ -61,7 +61,9 @@ contract AddLiquidityScript is Script, Constants, Config {
         vm.stopBroadcast();
 
         vm.startBroadcast();
-        UniliquidHook(address(hookContract)).addLiquidity(msg.sender, key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount, amount);
+        UniliquidHook(address(hookContract)).addLiquidity(
+            msg.sender, key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount, amount
+        );
         vm.stopBroadcast();
     }
 
