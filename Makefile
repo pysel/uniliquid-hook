@@ -9,11 +9,6 @@ deploy-hook:
 deploy-pool-with-initial-liquidity:
 	forge script script/01_CreatePoolAndMintLiquidity.s.sol:CreatePoolAndMintLiquidityScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
 
-deploy-all:
-	deploy-hook
-	deploy-mock-tokens
-	deploy-pool-with-initial-liquidity
-
 swap:
 	forge script script/03_Swap.s.sol:SwapScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
 
