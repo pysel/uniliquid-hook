@@ -7,13 +7,6 @@
 - [Introduction](#introduction)
 - [Testnet Deployments](#testnet-deployments)
   - [Unichain Sepolia](#unichain-sepolia)
-- [Why Stablecoins?](#why-stablecoins)
-- [Smart Contract Overview](#smart-contract-overview)
-  - [Allowed Stablecoins](#allowed-stablecoins)
-  - [Pool Initialization](#pool-initialization)
-  - [Liquidity Provision](#liquidity-provision)
-  - [Liquidity Redemption](#liquidity-redemption)
-  - [Swapping](#swapping)
 - [Deploying the Hook](#deploying-the-hook)
 - [Future Tasks](#future-tasks)
 
