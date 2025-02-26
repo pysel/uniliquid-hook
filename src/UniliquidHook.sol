@@ -159,7 +159,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         address,
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
-        bytes calldata
+        bytes calldata data
     ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
         address currency0 = Currency.unwrap(key.currency0);
         address currency1 = Currency.unwrap(key.currency1);
@@ -195,6 +195,9 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
             CFMMLibrary.NORMALIZED_DECIMALS
         );
 
+        // decode the minimum amount out
+        uint256 minAmountOut = abi.decode(data, (uint256));
+
         // Calculate output in normalized decimals
         uint256 normalizedOut = CFMMLibrary.binarySearchExactIn(
             k,
@@ -211,6 +214,11 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
             CFMMLibrary.NORMALIZED_DECIMALS,
             ERC20(currency1).decimals()
         );
+        
+        // check if the output amount is less than the minimum amount out
+        if (amountOut < minAmountOut) {
+            revert SlippageProtection(amountOut, minAmountOut);
+        }
 
         // update reserves
         if (params.zeroForOne) {

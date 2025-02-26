@@ -45,7 +45,7 @@ contract UniliquidHookTest is Test, Fixtures {
     int24 tickLower;
     int24 tickUpper;
     uint256 constant SWAP_ERR_TOLERANCE = 1e12; // within a 0.0001% of the true amount out
-    bytes hookData = abi.encode();
+    bytes hookData = abi.encode(0); // no slippage protection
 
     uint256 amountAddedInitially = 10e18;
 

@@ -14,6 +14,8 @@ contract UniliquidVariables {
     error ExactOutSwapsNotYetSupported();
     /// @notice Error thrown when the normalized deposited liquidity mismatch
     error NormalizedDepositedLiquidityMismatch();
+    /// @notice Error thrown when the output amount is less than the minimum amount out
+    error SlippageProtection(uint256 amountOut, uint256 minAmountOut);
 
     /// @notice Event emitted when liquidity is added to the pool
     event LiquidityAdded(
