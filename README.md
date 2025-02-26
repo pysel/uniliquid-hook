@@ -7,6 +7,7 @@
 - [Introduction](#introduction)
 - [Testnet Deployments](#testnet-deployments)
   - [Unichain Sepolia](#unichain-sepolia)
+- [Docs](#docs)
 - [Deploying the Hook](#deploying-the-hook)
 - [Future Tasks](#future-tasks)
 
@@ -39,6 +40,12 @@ Example wallet with Uniliquids:
 <div align="center">
   <img src="assets/example-wallet.png" alt="Example wallet" style="width: 50%; height: auto; max-width: 50vh; max-height: 50vh; object-fit: cover;">
 </div>
+
+## Docs
+
+- [Motivation](docs/00_Motivation.md)
+- [Custom Curve](docs/01_CFMM.md)
+- [Contract Overview](docs/02_Contract_Overview.md)
 
 ## Deployment Scripts
 
