@@ -8,6 +8,8 @@
 - [Testnet Deployments](#testnet-deployments)
   - [Unichain Sepolia](#unichain-sepolia)
 - [Docs](#docs)
+- [Prerequisites](#prerequisites)
+- [Running Tests](#running-tests)
 - [Deploying the Hook](#deploying-the-hook)
 - [Future Tasks](#future-tasks)
 
@@ -46,6 +48,18 @@ Example wallet with Uniliquids:
 - [Motivation](docs/00_Motivation.md)
 - [Custom Curve](docs/01_CFMM.md)
 - [Contract Overview](docs/02_Contract_Overview.md)
+
+## Prerequisites
+
+- [Foundry](https://getfoundry.sh/)
+
+## Running Tests
+
+To run the tests, run the following command:
+
+```bash
+make test
+```
 
 ## Deployment Scripts
 

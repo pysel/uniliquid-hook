@@ -1,5 +1,8 @@
 include .env
 
+test:
+	forge test
+
 deploy-mock-tokens:
 	forge script script/mocks/MockER20.s.sol:MockTokenScript --rpc-url $(RPC_URL) --chain-id $(CHAIN_ID) --mnemonics $(MNEMONIC) --broadcast --sender $(SENDER)
 
