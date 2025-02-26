@@ -204,7 +204,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         );
 
         // apply fee
-        normalizedOut = normalizedOut.applyFee(FEE_AMOUNT);
+        normalizedOut = normalizedOut.applyFee(key.fee);
 
         // Convert output back to token decimals
         uint256 amountOut = normalizedOut.scaleAmount(
