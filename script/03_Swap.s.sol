@@ -49,7 +49,7 @@ contract SwapScript is Script, Constants, Config {
         bool zeroForOne = false;
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
-            amountSpecified: 256e18,
+            amountSpecified: -256e18,
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : type(uint160).max
         });
 
@@ -58,7 +58,7 @@ contract SwapScript is Script, Constants, Config {
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false});
 
-        bytes memory hookData = abi.encode(msg.sender);
+        bytes memory hookData;
         
         console.log("usdt balance before swap", usdt.balanceOf(msg.sender));
         console.log("usdc balance before swap", usdc.balanceOf(msg.sender));

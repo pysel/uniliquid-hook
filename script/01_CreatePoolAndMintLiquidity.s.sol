@@ -53,6 +53,11 @@ contract CreatePoolAndMintLiquidityScript is Script, Constants, Config {
         // multicall to atomically create pool & add liquidity
         vm.broadcast();
         POOLMANAGER.initialize(key, SQRT_PRICE_1_1);
+
+        UniliquidHook hook = UniliquidHook(address(hookContract));
+
+        vm.broadcast();
+        hook.addLiquidity(msg.sender, key, Currency.unwrap(currency0), Currency.unwrap(currency1), 10e18, 10e18);
     }
 
     function allowTokens() public {

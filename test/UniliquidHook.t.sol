@@ -19,7 +19,7 @@ import {IPositionManager} from "v4-periphery/src/interfaces/IPositionManager.sol
 import {EasyPosm} from "./utils/EasyPosm.sol";
 import {Fixtures} from "./utils/Fixtures.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {BinarySearch} from "../src/library/BinarySearch.sol";
+import {UniliquidLibrary} from "../src/library/UniliquidLibrary.sol";
 import {Uniliquid} from "../src/Uniliquid.sol";
 
 /*
@@ -36,7 +36,7 @@ contract UniliquidHookTest is Test, Fixtures {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using StateLibrary for IPoolManager;
-    using BinarySearch for uint256;
+    using UniliquidLibrary for uint256;
 
     UniliquidHook hook;
     PoolId poolId;
@@ -46,6 +46,8 @@ contract UniliquidHookTest is Test, Fixtures {
     int24 tickUpper;
     uint256 constant SWAP_ERR_TOLERANCE = 1e12; // within a 0.0001% of the true amount out
     bytes hookData = abi.encode();
+
+    uint256 amountAddedInitially = 10e18;
 
     function setUp() public {
         // creates the pool manager, utility routers, and test tokens
@@ -69,8 +71,8 @@ contract UniliquidHookTest is Test, Fixtures {
         hook.addAllowedStablecoin(Currency.unwrap(currency0));
         hook.addAllowedStablecoin(Currency.unwrap(currency1));
 
-        approveHook(currency0, hook.AMOUNT_ADDED_INITIALLY());
-        approveHook(currency1, hook.AMOUNT_ADDED_INITIALLY());
+        approveHook(currency0, amountAddedInitially);
+        approveHook(currency1, amountAddedInitially);
 
         // // Create the pool
         key = PoolKey(currency0, currency1, 3000, 60, IHooks(hook));
@@ -85,10 +87,10 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function addLiquidity() public {
-        approveHook(currency0, hook.AMOUNT_ADDED_INITIALLY());
-        approveHook(currency1, hook.AMOUNT_ADDED_INITIALLY());
+        approveHook(currency0, amountAddedInitially);
+        approveHook(currency1, amountAddedInitially);
 
-        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), hook.AMOUNT_ADDED_INITIALLY(), hook.AMOUNT_ADDED_INITIALLY());
+        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amountAddedInitially, amountAddedInitially);
     }
 
     function testAddLiquidity() public {
@@ -309,6 +311,9 @@ contract UniliquidHookTest is Test, Fixtures {
         uint256 currency0BalanceChange = currency0BalanceAfter - currency0BalanceBefore;
         uint256 currency1BalanceChange = currency1BalanceBefore - currency1BalanceAfter;
 
+        console.log("currency0BalanceChange", currency0BalanceChange);
+        console.log("amountOutExpected", amountOutExpected);
+
         assertTrue(currency0BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
         assertEq(currency1BalanceChange, uint256(-amountIn));
 
@@ -346,8 +351,8 @@ contract UniliquidHookTest is Test, Fixtures {
         ERC20 ulCurrency0Token = ERC20(ulCurrency0);
         ERC20 ulCurrency1Token = ERC20(ulCurrency1);
 
-        assertEq(ulCurrency0Token.totalSupply(), hook.AMOUNT_ADDED_INITIALLY());
-        assertEq(ulCurrency1Token.totalSupply(), hook.AMOUNT_ADDED_INITIALLY());
+        assertEq(ulCurrency0Token.totalSupply(), amountAddedInitially);
+        assertEq(ulCurrency1Token.totalSupply(), amountAddedInitially);
     }
 
     // simulates two swaps: first is oneForZero, second is zeroForOne

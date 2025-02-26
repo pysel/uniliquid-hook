@@ -2,91 +2,28 @@
 pragma solidity ^0.8.24;
 
 import {BaseHook} from "./forks/BaseHook.sol";
-import {console} from "forge-std/console.sol";
 import {Hooks} from "v4-core/src/libraries/Hooks.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
-import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {Currency} from "v4-core/src/types/Currency.sol";
 import {Uniliquid} from "./Uniliquid.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {BinarySearch} from "./library/BinarySearch.sol";
+import {UniliquidLibrary, CFMMLibrary} from "./library/UniliquidLibrary.sol";
 import {SafeCast} from "v4-core/src/libraries/SafeCast.sol";
-import {toBeforeSwapDelta, BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
+import {toBeforeSwapDelta, BeforeSwapDelta} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {SafeCallback} from "v4-periphery/src/base/SafeCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// import {CallbackData} from "v4-core/src/types/CallbackData.sol";
-
+import {UniliquidVariables} from "./UniliquidVariables.sol";
 
 /// @title UniliquidHook
 /// @author Ruslan Akhtariev
 /// @notice A hook for creating liquid LP positions on stablecoin pools with a custom AMM implementation (CFMM - xy(x^2 + y^2) = k)
 /// @notice The curve graph may be found here: https://www.desmos.com/calculator/kbo1rjbalx
-contract UniliquidHook is BaseHook, SafeCallback {
+contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     using PoolIdLibrary for PoolKey;
-    using BinarySearch for uint256;
+    using UniliquidLibrary for uint256;
     using SafeCast for uint256;
-
-    /// @notice Error thrown when a non-stablecoin is passed to the hook
-    error OnlyStablecoins(address currency0, address currency1);
-    /// @notice Error thrown when add liquidity is called through the pool manager (disabled)
-    error AddLiquidityDirectlyToHook();
-    /// @notice Error thrown when remove liquidity is called through the pool manager (disabled)
-    error RemoveLiquidityDirectlyFromHook();
-    /// @notice Error thrown when the reserves are insufficient
-    error InsufficientReserves(address currency0, address currency1);
-    /// @notice Temporary error thrown when amountSpecified is negative (exactOut swaps not yet supported)
-    error ExactOutSwapsNotYetSupported();
-    /// @notice Error thrown when the normalized deposited liquidity mismatch
-    error NormalizedDepositedLiquidityMismatch();
-
-    /// @notice Event emitted when liquidity is added to the pool
-    event LiquidityAdded(
-        address indexed currency0,
-        address indexed currency1,
-        uint256 amount0,
-        uint256 amount1
-    );
-    /// @notice Event emitted when liquidity is removed from the pool
-    event LiquidityRemoved(
-        address indexed currency0,
-        address indexed currency1,
-        uint256 amount0Out,
-        uint256 amount1Out
-    );
-
-    /// @notice Per-pool true reserves
-    struct PoolReserves {
-        uint256 currency0Reserves;
-        uint256 currency1Reserves;
-    }
-
-    /* Naming convention for uniliquid erc-20 stablecoins
-        Symbol: ul<stablecoin_symbol>
-        Name: uniliquid <stablecoin_name>
-        Example:
-            Symbol: ulUSDC
-            Name: uniliquidUSDC
-    */
-
-    /// @notice Prefix for the symbol of the uniliquid erc-20 stablecoin
-    string public constant LIQUID_TOKEN_SYMBOL_PREFIX = "ul";
-    /// @notice Prefix for the name of the uniliquid erc-20 stablecoin
-    string public constant LIQUID_TOKEN_NAME_PREFIX = "Uniliquid ";
-
-    /// @notice Initially added amount of both stablecoins to create k. Initial k is thus 100e18
-    uint256 public constant AMOUNT_ADDED_INITIALLY = 10e18;
-    /// @notice Base decimals for internal calculations (in case when stablecoins have different decimals)
-    uint256 public constant NORMALIZED_DECIMALS = 18;
-    /// @notice Fee amount in basis points (0.3%)
-    uint256 public constant FEE_AMOUNT = 3000;
-    /// @notice Maximum number of binary search iterations for finding the amount out of a swap
-    /// @dev Each iteration is worthapproximately 3000 gas (0.0009 USD)
-    uint256 private constant MAX_BINARY_ITERATIONS = 30;
-    /// @notice Error tolerance for the constant k from the guessed amount out to the true amount out (0.0001%)
-    uint256 private constant ERROR_TOLERANCE = 1e12;
 
     /// @notice Mapping of allowed stablecoins
     mapping(address => ERC20) public allowedStablecoins;
@@ -230,11 +167,14 @@ contract UniliquidHook is BaseHook, SafeCallback {
         uint256 reserve0 = poolToReserves[key.toId()].currency0Reserves;
         uint256 reserve1 = poolToReserves[key.toId()].currency1Reserves;
 
-        if (reserve0 == 0 || reserve1 == 0) {
+        uint256 reserveIn = params.zeroForOne ? reserve0 : reserve1;
+        uint256 reserveOut = params.zeroForOne ? reserve1 : reserve0;
+
+        if (reserveIn == 0 || reserveOut == 0) {
             revert InsufficientReserves(currency0, currency1);
         }
 
-        uint256 k = K(reserve0, reserve1);
+        uint256 k = CFMMLibrary.K(reserveIn, reserveOut);
 
         int256 amountInI = params.amountSpecified;
         if (amountInI >= 0) {
@@ -245,75 +185,45 @@ contract UniliquidHook is BaseHook, SafeCallback {
         Currency output = params.zeroForOne ? key.currency1 : key.currency0;
 
         uint256 amountIn = uint256(-params.amountSpecified);
+
+        // mint input tokens to the hook
         poolManager.mint(address(this), input.toId(), amountIn);
 
+        // Normalize input amount
+        uint256 normalizedIn = amountIn.scaleAmount(
+            ERC20(currency0).decimals(),
+            CFMMLibrary.NORMALIZED_DECIMALS
+        );
+
+        // Calculate output in normalized decimals
+        uint256 normalizedOut = CFMMLibrary.binarySearchExactIn(
+            k,
+            reserveOut,
+            reserveIn,
+            normalizedIn
+        );
+
+        // apply fee
+        normalizedOut = normalizedOut.applyFee(FEE_AMOUNT);
+
+        // Convert output back to token decimals
+        uint256 amountOut = normalizedOut.scaleAmount(
+            CFMMLibrary.NORMALIZED_DECIMALS,
+            ERC20(currency1).decimals()
+        );
+
+        // update reserves
         if (params.zeroForOne) {
-            // Normalize input amount
-            uint256 normalizedIn = scaleAmount(
-                amountIn,
-                ERC20(currency0).decimals(),
-                NORMALIZED_DECIMALS
-            );
-
-            // Calculate output in normalized decimals
-            uint256 normalizedOut = binarySearchExactIn(
-                k,
-                reserve1,
-                reserve0,
-                normalizedIn
-            );
-            normalizedOut = applyFee(normalizedOut);
-
-            // Convert output back to token decimals
-            uint256 amountOut = scaleAmount(
-                normalizedOut,
-                NORMALIZED_DECIMALS,
-                ERC20(currency1).decimals()
-            );
-
             poolToReserves[key.toId()].currency0Reserves += normalizedIn;
             poolToReserves[key.toId()].currency1Reserves -= normalizedOut;
-
-            poolManager.burn(address(this), output.toId(), amountOut);
-
-            return (
-                BaseHook.beforeSwap.selector,
-                toBeforeSwapDelta(amountIn.toInt128(), -amountOut.toInt128()),
-                0
-            );
         } else {
-            // Similar logic for token1 to token0 swap
-            uint256 normalizedIn = scaleAmount(
-                amountIn,
-                ERC20(currency1).decimals(),
-                NORMALIZED_DECIMALS
-            );
-
-            uint256 normalizedOut = binarySearchExactIn(
-                k,
-                reserve0,
-                reserve1,
-                normalizedIn
-            );
-            normalizedOut = applyFee(normalizedOut);
-
-            uint256 amountOut = scaleAmount(
-                normalizedOut,
-                NORMALIZED_DECIMALS,
-                ERC20(currency0).decimals()
-            );
-
             poolToReserves[key.toId()].currency0Reserves -= normalizedOut;
             poolToReserves[key.toId()].currency1Reserves += normalizedIn;
-
-            poolManager.burn(address(this), output.toId(), amountOut);
-
-            return (
-                BaseHook.beforeSwap.selector,
-                toBeforeSwapDelta(amountIn.toInt128(), -amountOut.toInt128()),
-                0
-            );
         }
+
+        poolManager.burn(address(this), output.toId(), amountOut);
+
+        return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(amountIn.toInt128(), -amountOut.toInt128()), 0);
     }
 
     /// @notice The disabled native Uniswap V4 add liquidity functionality
@@ -357,15 +267,13 @@ contract UniliquidHook is BaseHook, SafeCallback {
         reentrancyGuard
     {
         // Convert amounts to normalized decimals for internal accounting
-        uint256 normalized0 = scaleAmount(
-            amount0,
+        uint256 normalized0 = amount0.scaleAmount(
             ERC20(currency0).decimals(),
-            NORMALIZED_DECIMALS
+            CFMMLibrary.NORMALIZED_DECIMALS
         );
-        uint256 normalized1 = scaleAmount(
-            amount1,
+        uint256 normalized1 = amount1.scaleAmount(
             ERC20(currency1).decimals(),
-            NORMALIZED_DECIMALS
+            CFMMLibrary.NORMALIZED_DECIMALS
         );
 
         // depositing stablecoins to a pool with different normalized amounts is not allowed
@@ -511,111 +419,5 @@ contract UniliquidHook is BaseHook, SafeCallback {
     /// @param currency The address of the stablecoin to remove
     function removeAllowedStablecoin(address currency) external {
         allowedStablecoins[currency] = ERC20(address(0));
-    }
-
-    /////////////////// Internal functions ///////////////////
-
-    /// @notice Performs a binary search to find the exact amount of a token a user should receive from the swap
-    /// @param k The CFMM constant
-    /// @param reserveOut The reserve of the token being swapped out
-    /// @param reserveIn The reserve of the token being swapped in
-    /// @param addedIn The amount of the token being swapped in
-    /// @return The amount of the token a user should receive from the swap
-    function binarySearchExactIn(
-        uint256 k,
-        uint256 reserveOut,
-        uint256 reserveIn,
-        uint256 addedIn
-    ) internal pure returns (uint256) {
-        uint256 reserveInNew = reserveIn + addedIn;
-        // Set initial bounds for binary search
-        uint256 left = 0;
-        // Upper bound is twice the addedIn amount, because we are trading stablecoins
-        uint256 right = addedIn * 2;
-
-        uint256 computedK;
-        uint256 guessOut = addedIn;
-
-        for (uint256 i = 0; i < MAX_BINARY_ITERATIONS; ++i) {
-            computedK = binK(reserveOut, guessOut, reserveInNew);
-
-            // Simplified comparison logic
-            if (computedK.within(ERROR_TOLERANCE, k)) {
-                return guessOut;
-            }
-
-            uint256 mid = (left + right) / 2;
-            if (computedK < k) {
-                right = mid;
-            } else {
-                left = mid;
-            }
-
-            guessOut = (left + right) / 2;
-        }
-
-        // Return middle value after max iterations
-        return (left + right) / 2;
-    }
-
-    /// @notice Applies a fee of 0.3% to the amount
-    /// @param amount The amount to apply the fee to
-    /// @return The amount after the fee is applied
-    function applyFee(uint256 amount) internal pure returns (uint256) {
-        return (amount * (1000000 - FEE_AMOUNT)) / 1000000;
-    }
-
-    /// @notice Computes k for the binary search guess iteration
-    /// @dev k = (reserveOut - guessOut) * (reserveInNew) * ((reserveOut - guessOut)**2 + reserveInNew**2)
-    /// @param reserveOut The reserve of the token being swapped out
-    /// @param guessOut The guess (a binary search one) for the amount of the token being swapped out
-    /// @param reserveInNew The reserve of the token being swapped in after the swap
-    /// @return The constant k
-    function binK(
-        uint256 reserveOut,
-        uint256 guessOut,
-        uint256 reserveInNew
-    ) internal pure returns (uint256) {
-        uint256 reserveOutNew = reserveOut - guessOut;
-        return K(reserveOutNew, reserveInNew);
-    }
-
-    /// @notice Computes the constant k from reserves
-    /// @dev k = reserve0 * reserve1 * (reserve0**2 + reserve1**2)
-    /// @param reserve0 The amount of currency0 in the pool
-    /// @param reserve1 The amount of currency1 in the pool
-    /// @return The constant k
-    function K(
-        uint256 reserve0,
-        uint256 reserve1
-    ) internal pure returns (uint256) {
-        uint256 denominator = 10 ** NORMALIZED_DECIMALS;
-
-        uint256 xy = (reserve0 * reserve1) / denominator;
-        uint256 x2y2 = (reserve0 * reserve0 + reserve1 * reserve1) /
-            denominator;
-
-        return xy * x2y2;
-    }
-
-    /// @notice Scales an amount from one decimal precision to another
-    /// @param amount The amount to scale
-    /// @param fromDecimals The current decimal precision
-    /// @param toDecimals The target decimal precision
-    /// @return The scaled amount
-    function scaleAmount(
-        uint256 amount,
-        uint256 fromDecimals,
-        uint256 toDecimals
-    ) internal pure returns (uint256) {
-        if (fromDecimals == toDecimals) {
-            return amount;
-        }
-
-        if (fromDecimals > toDecimals) {
-            return amount / (10 ** (fromDecimals - toDecimals));
-        }
-
-        return amount * (10 ** (toDecimals - fromDecimals));
     }
 }
