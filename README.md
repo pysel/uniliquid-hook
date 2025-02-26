@@ -43,7 +43,9 @@ A more detailed artifacts can be found in the `broadcast-sepolia` folder.
 
 Example wallet with Uniliquids:
 
-![Example wallet](assets/example-wallet.png)
+<div align="center">
+  <img src="assets/example-wallet.png" alt="Example wallet" style="width: 50%; height: auto; max-width: 50vh; max-height: 50vh; object-fit: cover;">
+</div>
 
 ## Why Stablecoins?
 
