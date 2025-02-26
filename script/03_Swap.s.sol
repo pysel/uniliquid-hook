@@ -38,10 +38,16 @@ contract SwapScript is Script, Constants, Config {
         });
 
         // approve tokens to the hook
-        vm.broadcast();
+        vm.startBroadcast();
         usdt.approve(address(hookContract), type(uint256).max);
-        vm.broadcast();
+        usdt.approve(address(swapRouter), type(uint256).max);
+
+        vm.stopBroadcast();
+
+        vm.startBroadcast();
         usdc.approve(address(hookContract), type(uint256).max);
+        usdc.approve(address(swapRouter), type(uint256).max);
+        vm.stopBroadcast();
 
         // ------------------------------ //
         // Swap 100e18 token0 into token1 //
