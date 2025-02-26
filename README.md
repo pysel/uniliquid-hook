@@ -139,22 +139,40 @@ where `computedK` is the currently computed `k` value, with `guessOut` being the
 
 Currently, the `MAX_BINARY_ITERATIONS` is set to 30, and the `ERROR_TOLERANCE` is set to `0.01%`. This means that the constant `k` might deviate by `0.01%` from the actual `k` value, either up or down depending on the direction of the swap. This might sound extreme, but when you consider that constant `k` deviates from the actual `k` by `0.3%` in Uniswap V2 due to fees, it doesn't really matter.
 
-## Deploying the Hook
+## Deployment Scripts
 
-First, set all the required `.env` and `script/base` variables. Then, there are two ways to deploy the hook:
+### Deploying the Hook
 
-1. The quick way: `make deploy-all` (make sure `script/base` is set correctly)
-2. The manual way:
-    - Deploy the mock tokens: `make deploy-mock-tokens` (Optional)
-    - Deploy the hook: `make deploy-hook`
-    - Deploy the pool with initial liquidity: `make deploy-pool-with-initial-liquidity`
+To deploy the hook, run the following commands:
 
-### Funding the Sender (Optional, only for testing)
+1. Set the required `.env` variables. The list can be found in the `example.env` file.
+2. (Optional) Deploy the mock tokens with `make deploy-mock-tokens`. Set the contract addresses of the deployed tokens in the `script/base/Config.sol` file.
+3. (Optional) Set the contract addresses for the `PoolManager` and `PositionManager` in the `script/base/Constants.sol` file.
+4. Deploy the hook with `make deploy-hook`.
+5. Set the contract address of the deployed hook in the `script/base/Config.sol` file.
 
-To fund the sender with USDC and USDT on Unichain Sepolia, run the following command:
+### Funding the Sender (Optional)
+
+To fund the sender with testnet USDC and USDT on Unichain Sepolia, run the following command:
 
 ```bash
 make fund-me
+```
+
+### Creating the Pool with Initial Liquidity
+
+To create the pool with initial liquidity, run the following command:
+
+```bash
+make deploy-pool-with-initial-liquidity
+```
+
+### Adding More Liquidity
+
+To add even more liquidity to the pool, run the following commands:
+
+```bash
+make add-liquidity
 ```
 
 ### Basic Swap
@@ -165,7 +183,7 @@ To perform a basic swap, run the following command:
 make swap
 ```
 
-This will perform a swap of 1 USDC to USDT.
+This will perform a swap of 1 USDC to USDT. If you wish to configure the swap amount, you can do so by changing the `amountSpecified` value in the `script/03_Swap.s.sol` file.
 
 ## Future Tasks
 

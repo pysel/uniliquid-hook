@@ -12,5 +12,4 @@ contract Constants {
     /// @dev populated with deployments from sepolia unichain
     IPoolManager constant POOLMANAGER = IPoolManager(address(0x00B036B58a818B1BC34d502D3fE730Db729e62AC));
     PositionManager constant posm = PositionManager(payable(address(0xf969Aee60879C54bAAed9F3eD26147Db216Fd664)));
-    // IAllowanceTransfer constant PERMIT2 = IAllowanceTransfer(address(0x000000000022D473030F116dDEE9F6B43aC78BA3));
 }

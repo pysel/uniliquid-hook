@@ -52,10 +52,10 @@ contract SwapScript is Script, Constants, Config {
         // ------------------------------ //
         // Swap 100e18 token0 into token1 //
         // ------------------------------ //
-        bool zeroForOne = false;
+        bool zeroForOne = true;
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
-            amountSpecified: -256e18,
+            amountSpecified: -1e18,
             sqrtPriceLimitX96: zeroForOne ? TickMath.MIN_SQRT_PRICE + 1 : type(uint160).max
         });
 
