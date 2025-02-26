@@ -10,7 +10,7 @@ out/
 /broadcast
 
 # Docs
-docs/
+# docs/
 
 # Dotenv file
 .env
