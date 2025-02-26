@@ -2,6 +2,8 @@
 
 ![Banner!](assets/uniliquids-img.png)
 
+**WARNING: This is the only hook you will ever need for stablecoin-to-stablecoin pools.**
+
 ## Table of Contents
 
 - [Introduction](#introduction)
