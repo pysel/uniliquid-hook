@@ -308,6 +308,7 @@ contract UniliquidHookTest is Test, Fixtures {
 
         swap(key, zeroForOne, amountIn, hookData);
 
+        // new k: 20000000001093169552525288627572233766736
         // https://www.wolframalpha.com/input?i=find+x+in+%2810e18+%2B+1e18%29%2810e18+-+x%29+%2F+1e18+*%28%2810e18+%2B+1e18%29%5E2+%2B+%2810e18+-+x%29%5E2%29+%2F+1e18+%3D+20000000000000000000000000000000000000000
         uint256 amountOutExpected = 999500518006395648;
         amountOutExpected = applyFee(amountOutExpected);
@@ -318,9 +319,6 @@ contract UniliquidHookTest is Test, Fixtures {
         // currency0 should increase, currency1 should decrease
         uint256 currency0BalanceChange = currency0BalanceAfter - currency0BalanceBefore;
         uint256 currency1BalanceChange = currency1BalanceBefore - currency1BalanceAfter;
-
-        console.log("currency0BalanceChange", currency0BalanceChange);
-        console.log("amountOutExpected", amountOutExpected);
 
         assertTrue(currency0BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
         assertEq(currency1BalanceChange, uint256(-amountIn));
@@ -334,9 +332,9 @@ contract UniliquidHookTest is Test, Fixtures {
 
         swap(key, zeroForOne, amountIn, hookData);
 
-        // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%289030484497534384903+%2B+1e18%29%2811e18+-+x%29%28%289030484497534384903+%2B+1e18%29%5E2+%2B+%2811e18+-+x%29%5E2%29+%3D+20120336243214102838134569266726391276333431006160704305597000000000000000000
+        // true amount out: https://www.wolframalpha.com/input?i=find+x+in+%2811e18+-+x%29%2810e18+-+999500518006395648+%2B+1e18%29+%2F+1e18+*%28%2811e18+-+x%29%5E2+%2B+%2810e18+-+999500518006395648+%2B+1e18%29%5E2%29+%2F+1e18+%3D+20000000001093169552525288627572233766736
         // this is diferent from the binary search test, because the binary search test does not take into account the fee
-        amountOutExpected = 1000496269222984064;
+        amountOutExpected = 1000499481720313088;
         amountOutExpected = applyFee(amountOutExpected);
 
         currency0BalanceAfter = currency0.balanceOf(address(this));
@@ -345,9 +343,6 @@ contract UniliquidHookTest is Test, Fixtures {
         // currency0 should decrease, currency1 should increase
         currency0BalanceChange = currency0BalanceBefore - currency0BalanceAfter;
         currency1BalanceChange = currency1BalanceAfter - currency1BalanceBefore;
-
-        console.log("currency1BalanceChange", currency1BalanceChange);
-        console.log("amountOutExpected", amountOutExpected);
 
         assertTrue(currency1BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
         assertEq(currency0BalanceChange, uint256(-amountIn));
