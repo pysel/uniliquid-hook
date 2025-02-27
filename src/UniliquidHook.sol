@@ -15,12 +15,13 @@ import {toBeforeSwapDelta, BeforeSwapDelta} from "v4-core/src/types/BeforeSwapDe
 import {SafeCallback} from "v4-periphery/src/base/SafeCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UniliquidVariables} from "./UniliquidVariables.sol";
+import {UniliquidFeeAccrual} from "./UniliquidFeeAccrual.sol";
 
 /// @title UniliquidHook
 /// @author Ruslan Akhtariev
 /// @notice A hook for creating liquid LP positions on stablecoin pools with a custom AMM implementation (CFMM - xy(x^2 + y^2) = k)
 /// @notice The curve graph may be found here: https://www.desmos.com/calculator/kbo1rjbalx
-contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
+contract UniliquidHook is BaseHook, UniliquidVariables, UniliquidFeeAccrual, SafeCallback {
     using PoolIdLibrary for PoolKey;
     using UniliquidLibrary for uint256;
     using SafeCast for uint256;
@@ -185,6 +186,8 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         }
 
         poolManager.burn(address(this), output.toId(), amountOut);
+
+        updateFeeAccrual(key.toId(), !params.zeroForOne, amountOut);
 
         return (BaseHook.beforeSwap.selector, toBeforeSwapDelta(amountIn.toInt128(), -amountOut.toInt128()), 0);
     }
