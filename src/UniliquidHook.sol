@@ -63,6 +63,14 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         reentrancyGuard_ = false;
     }
 
+    /// @notice Prevents adding liquidity to a pool with zero reserves
+    modifier zeroReserves(PoolId poolId) {
+        if (poolToReserves[poolId].currency0Reserves != 0 || poolToReserves[poolId].currency1Reserves != 0) {
+            revert NonZeroReserves(poolId);
+        }
+        _;
+    }
+
     constructor(IPoolManager manager) SafeCallback(manager) {}
 
     function _poolManager() internal view override returns (IPoolManager) {
@@ -107,18 +115,28 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         address currency0 = Currency.unwrap(key.currency0);
         address currency1 = Currency.unwrap(key.currency1);
 
+        string memory symbol;
+        string memory name;
         // creates a uniliquid erc-20 stablecoin if it is allowed, but non-existent yet
         if (tokenToLiquid[currency0] == Uniliquid(address(0))) {
-            string memory symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency0).symbol());
-            string memory name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency0).name());
+            symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency0).symbol());
+            name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency0).name());
             tokenToLiquid[currency0] = new Uniliquid(name, symbol, address(this));
         }
 
         if (tokenToLiquid[Currency.unwrap(key.currency1)] == Uniliquid(address(0))) {
-            string memory symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency1).symbol());
-            string memory name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency1).name());
+            symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, ERC20(currency1).symbol());
+            name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency1).name());
             tokenToLiquid[currency1] = new Uniliquid(name, symbol, address(this));
         }
+
+        require(poolToToken[key.toId()] == PoolToken(address(0)), "Pool fee token already exists");
+
+        // initialize the pool fee token (non-existent yet)
+        name = string.concat(LIQUID_TOKEN_NAME_PREFIX, ERC20(currency0).name(), "-", ERC20(currency1).name());
+        symbol = string.concat(LIQUID_TOKEN_SYMBOL_PREFIX, "-", ERC20(currency0).symbol(), "-", ERC20(currency1).symbol());
+
+        poolToToken[key.toId()] = new PoolToken(name, symbol, address(this));
 
         return BaseHook.beforeInitialize.selector;
     }
@@ -221,8 +239,38 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         revert RemoveLiquidityDirectlyFromHook();
     }
 
+    /// @notice Adds liquidity to the empty pool
+    /// @dev the amount of each token deposited must be the same. This will revert if the reserves are non-zero in the pool, use addLiquidity instead
+    /// @param sender The address of the sender
+    /// @param key The pool key
+    /// @param currency0 The address of the first stablecoin
+    /// @param currency1 The address of the second stablecoin
+    /// @param normalizedAmount The amount of each token deposited
+    function addLiquidityInitial(
+        address sender,
+        PoolKey calldata key,
+        address currency0,
+        address currency1,
+        uint256 normalizedAmount
+    ) public onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1)) reentrancyGuard zeroReserves(key.toId()) {
+        // update reserves
+        poolToReserves[key.toId()].currency0Reserves = normalizedAmount;
+        poolToReserves[key.toId()].currency1Reserves = normalizedAmount;
+        
+        // mint uniliquid tokens to the sender
+        tokenToLiquid[currency0].mint(sender, normalizedAmount);
+        tokenToLiquid[currency1].mint(sender, normalizedAmount);
+
+        // mint the fee pool token to the sender
+        poolToToken[key.toId()].mint(sender, normalizedAmount);
+
+        poolManager.unlock(abi.encode(sender, key.currency0, key.currency1, normalizedAmount, normalizedAmount, true));
+
+        emit LiquidityAdded(currency0, currency1, normalizedAmount, normalizedAmount);
+    }
+
     /// @notice Adds liquidity to the pool
-    /// @dev the amount of each token deposited must be the same
+    /// @dev the amount of each token deposited must be the same. This will revert if the reserves are zero in the pool, use addLiquidityInitial instead
     /// @param sender The address of the sender
     /// @param key The pool key
     /// @param currency0 The address of the first stablecoin
@@ -247,23 +295,31 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
             revert NormalizedDepositedLiquidityMismatch();
         }
 
-        // Mint liquid tokens using normalized amounts
-        tokenToLiquid[currency0].mint(sender, normalized0);
-        tokenToLiquid[currency1].mint(sender, normalized1);
+        // get the fraction of the total supply of reserves a user is depositing
+        uint256 depositFraction0 = (normalized0 * 10 ** CFMMLibrary.NORMALIZED_DECIMALS / poolToReserves[key.toId()].currency0Reserves);
+        uint256 depositFraction1 = (normalized1 * 10 ** CFMMLibrary.NORMALIZED_DECIMALS / poolToReserves[key.toId()].currency1Reserves);
 
-        // ERC20(currency0).transferFrom(sender, address(this), amount0);
-        // ERC20(currency1).transferFrom(sender, address(this), amount1);
+        // get the minimum of the two fractions, and the minimum of the two normalized amounts
+        uint256 depositFraction = depositFraction0 > depositFraction1 ? depositFraction1 : depositFraction0;
+        uint256 depositAmount = normalized0 > normalized1 ? normalized1 : normalized0;
+
+        // mint uniliquid tokens based on the fraction of the total supply of reserves a user is depositing
+        uint256 mintUniliquids = tokenToLiquid[currency0].totalSupply() * depositFraction / CFMMLibrary.NORMALIZING_FACTOR;
+
+        // Mint liquid tokens using normalized amounts
+        tokenToLiquid[currency0].mint(sender, mintUniliquids);
+        tokenToLiquid[currency1].mint(sender, mintUniliquids);
+
+        // mint the fee pool token to the sender
+        poolToToken[key.toId()].mint(sender, mintUniliquids);
 
         // Store normalized reserves
-        poolToReserves[key.toId()].currency0Reserves += normalized0;
-        poolToReserves[key.toId()].currency1Reserves += normalized1;
+        poolToReserves[key.toId()].currency0Reserves += depositAmount;
+        poolToReserves[key.toId()].currency1Reserves += depositAmount;
 
-        // poolManager.mint(address(this), Currency.wrap(currency0).toId(), amount0);
-        // poolManager.mint(address(this), Currency.wrap(currency1).toId(), amount1);
+        poolManager.unlock(abi.encode(sender, key.currency0, key.currency1, depositAmount, depositAmount, true));
 
-        poolManager.unlock(abi.encode(sender, key.currency0, key.currency1, amount0, amount1, true));
-
-        emit LiquidityAdded(currency0, currency1, amount0, amount1);
+        emit LiquidityAdded(currency0, currency1, depositAmount, depositAmount);
     }
 
     /// @notice Removes liquidity from the pool
@@ -271,27 +327,31 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     /// @param key The pool key
     /// @param currency0 The address of the first stablecoin
     /// @param currency1 The address of the second stablecoin
-    /// @param amount The amount of each token to remove
+    /// @param amount The amount of each uniliquid token / fee token to remove
     function removeLiquidity(address sender, PoolKey calldata key, address currency0, address currency1, uint256 amount)
         external
         onlyStablecoins(Currency.wrap(currency0), Currency.wrap(currency1))
         reentrancyGuard
     {
+        // get the fraction of the total supply of uniliquid tokens a user is removing (same for 0 and 1, thus only one calculation)
+        uint256 fractionOut = amount * 10 ** CFMMLibrary.NORMALIZED_DECIMALS / tokenToLiquid[currency0].totalSupply();
+
+        uint256 trueReserve0 = poolToReserves[key.toId()].currency0Reserves - poolToFeeAccrual[key.toId()].feeAccruedToken0;
+        uint256 trueReserve1 = poolToReserves[key.toId()].currency1Reserves - poolToFeeAccrual[key.toId()].feeAccruedToken1;
+
+        uint256 feeAccrual0 = poolToFeeAccrual[key.toId()].feeAccruedToken0;
+        uint256 feeAccrual1 = poolToFeeAccrual[key.toId()].feeAccruedToken1;
+
+        // burn uniliquid tokens
         tokenToLiquid[currency0].burn(sender, amount);
         tokenToLiquid[currency1].burn(sender, amount);
 
-        uint256 fraction0Out =
-            (amount * 10 ** ERC20(currency0).decimals()) / poolToReserves[key.toId()].currency0Reserves;
-        uint256 fraction1Out =
-            (amount * 10 ** ERC20(currency1).decimals()) / poolToReserves[key.toId()].currency1Reserves;
+        // burn fee pool token
+        poolToToken[key.toId()].burn(sender, amount);
 
-        uint256 amount0Out =
-            (fraction0Out * poolToReserves[key.toId()].currency0Reserves) / 10 ** ERC20(currency0).decimals();
-        uint256 amount1Out =
-            (fraction1Out * poolToReserves[key.toId()].currency1Reserves) / 10 ** ERC20(currency1).decimals();
-
-        // ERC20(currency0).transfer(sender, amount0Out);
-        // ERC20(currency1).transfer(sender, amount1Out);
+        // amount out is calculated as the sum of the fee accrual and the fraction of the total supply of uniliquid tokens a user is removing
+        uint256 amount0Out = fractionOut * trueReserve0 / CFMMLibrary.NORMALIZING_FACTOR + fractionOut * feeAccrual0 / CFMMLibrary.NORMALIZING_FACTOR;
+        uint256 amount1Out = fractionOut * trueReserve1 / CFMMLibrary.NORMALIZING_FACTOR + fractionOut * feeAccrual1 / CFMMLibrary.NORMALIZING_FACTOR;
 
         poolToReserves[key.toId()].currency0Reserves -= amount0Out;
         poolToReserves[key.toId()].currency1Reserves -= amount1Out;

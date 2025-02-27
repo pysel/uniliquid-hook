@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {PoolId} from "v4-core/src/types/PoolId.sol";
+
 contract UniliquidVariables {
     /// @notice Error thrown when a non-stablecoin is passed to the hook
     error OnlyStablecoins(address currency0, address currency1);
@@ -16,6 +18,8 @@ contract UniliquidVariables {
     error NormalizedDepositedLiquidityMismatch();
     /// @notice Error thrown when the output amount is less than the minimum amount out
     error SlippageProtection(uint256 amountOut, uint256 minAmountOut);
+    /// @notice Error thrown when the pool has non-zero reserves
+    error NonZeroReserves(PoolId poolId);
 
     /// @notice Event emitted when liquidity is added to the pool
     event LiquidityAdded(address indexed currency0, address indexed currency1, uint256 amount0, uint256 amount1);
@@ -48,7 +52,4 @@ contract UniliquidVariables {
     string public constant LIQUID_TOKEN_SYMBOL_PREFIX = "ul";
     /// @notice Prefix for the name of the uniliquid erc-20 stablecoin
     string public constant LIQUID_TOKEN_NAME_PREFIX = "Uniliquid ";
-
-    /// @notice Fee amount in basis points (0.3%)
-    uint256 public constant FEE_AMOUNT = 3000;
 }

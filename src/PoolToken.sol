@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
+import {PoolId} from "v4-core/src/types/PoolId.sol";
 /// @title PoolToken
 /// @notice A token that represents a position in a pool
 contract PoolToken is ERC20 {

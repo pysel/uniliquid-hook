@@ -53,6 +53,8 @@ library CFMMLibrary {
     uint256 public constant ERROR_TOLERANCE = 1e12;
     /// @notice Base decimals for internal calculations (in case when stablecoins have different decimals)
     uint256 public constant NORMALIZED_DECIMALS = 18;
+    /// @notice 1e(normalized decimals)
+    uint256 public constant NORMALIZING_FACTOR = 10 ** NORMALIZED_DECIMALS;
 
     /// @notice Performs a binary search to find the exact amount of a token a user should receive from the swap
     /// @param k The CFMM constant

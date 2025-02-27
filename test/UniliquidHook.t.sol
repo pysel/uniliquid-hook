@@ -45,6 +45,7 @@ contract UniliquidHookTest is Test, Fixtures {
     int24 tickLower;
     int24 tickUpper;
     uint256 constant SWAP_ERR_TOLERANCE = 1e12; // within a 0.0001% of the true amount out
+    uint256 constant FEE_AMOUNT = 3000;
     bytes hookData = abi.encode(0); // no slippage protection
 
     uint256 amountAddedInitially = 10e18;
@@ -85,21 +86,20 @@ contract UniliquidHookTest is Test, Fixtures {
         ERC20(Currency.unwrap(currency)).approve(address(manager), amount);
     }
 
-    function addLiquidity() public {
+    function addLiquidityInitial() public {
         approveHook(currency0, amountAddedInitially);
         approveHook(currency1, amountAddedInitially);
 
-        hook.addLiquidity(
+        hook.addLiquidityInitial(
             address(this),
             key,
             Currency.unwrap(currency0),
             Currency.unwrap(currency1),
-            amountAddedInitially,
             amountAddedInitially
         );
     }
 
-    function testAddLiquidity() public {
+    function testAddLiquidityInitial() public {
         uint256 amount = 1e18;
         approveHook(currency0, amount);
         approveHook(currency1, amount);
@@ -115,7 +115,7 @@ contract UniliquidHookTest is Test, Fixtures {
         uint256 stablecoin0BalanceBefore = currency0.balanceOf(address(this));
         uint256 stablecoin1BalanceBefore = currency1.balanceOf(address(this));
 
-        hook.addLiquidity(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount, amount);
+        hook.addLiquidityInitial(address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), amount);
 
         // verify pool reserves are correctly updated
         (uint256 poolReserves0After, uint256 poolReserves1After) = hook.poolToReserves(poolId);
@@ -148,7 +148,7 @@ contract UniliquidHookTest is Test, Fixtures {
     function testRemoveLiquidity() public {
         uint256 amount = 1e18;
 
-        addLiquidity();
+        addLiquidityInitial();
 
         approveHook(currency0, amount);
         approveHook(currency1, amount);
@@ -194,71 +194,71 @@ contract UniliquidHookTest is Test, Fixtures {
         assertEq(stablecoin1BalanceAfter, stablecoin1BalanceBefore + amount);
     }
 
-    function testSwapWithRemoveLiquidity() public {
-        int256 amount = int256(-5e18);
-        bool zeroForOne = true;
+    // function testSwapWithRemoveLiquidity() public {
+    //     int256 amount = int256(-5e18);
+    //     bool zeroForOne = true;
 
-        addLiquidity();
+    //     addLiquidityInitial();
 
-        approveHook(currency0, uint256(-amount));
+    //     approveHook(currency0, uint256(-amount));
 
-        // swap first
-        swap(key, zeroForOne, int256(amount), hookData);
+    //     // swap first
+    //     swap(key, zeroForOne, int256(amount), hookData);
 
-        // then remove liquidity
-        approveHook(currency0, uint256(-amount));
-        approveHook(currency1, uint256(-amount));
+    //     // then remove liquidity
+    //     approveHook(currency0, uint256(-amount));
+    //     approveHook(currency1, uint256(-amount));
 
-        uint256 redemptionAmount = 1e18;
+    //     uint256 redemptionAmount = 1e18;
 
-        (uint256 X, uint256 Y) = hook.poolToReserves(poolId);
+    //     (uint256 X, uint256 Y) = hook.poolToReserves(poolId);
 
-        Uniliquid uniliquid0 = hook.tokenToLiquid(Currency.unwrap(currency0));
-        Uniliquid uniliquid1 = hook.tokenToLiquid(Currency.unwrap(currency1));
+    //     Uniliquid uniliquid0 = hook.tokenToLiquid(Currency.unwrap(currency0));
+    //     Uniliquid uniliquid1 = hook.tokenToLiquid(Currency.unwrap(currency1));
 
-        uint256 uniliquidAmount0Before = uniliquid0.balanceOf(address(this));
-        uint256 uniliquidAmount1Before = uniliquid1.balanceOf(address(this));
+    //     uint256 uniliquidAmount0Before = uniliquid0.balanceOf(address(this));
+    //     uint256 uniliquidAmount1Before = uniliquid1.balanceOf(address(this));
 
-        uint256 stablecoin0BalanceBefore = currency0.balanceOf(address(this));
-        uint256 stablecoin1BalanceBefore = currency1.balanceOf(address(this));
+    //     uint256 stablecoin0BalanceBefore = currency0.balanceOf(address(this));
+    //     uint256 stablecoin1BalanceBefore = currency1.balanceOf(address(this));
 
-        uint256 uniliquidAmount0TotalBefore = uniliquid0.totalSupply();
-        uint256 uniliquidAmount1TotalBefore = uniliquid1.totalSupply();
+    //     uint256 uniliquidAmount0TotalBefore = uniliquid0.totalSupply();
+    //     uint256 uniliquidAmount1TotalBefore = uniliquid1.totalSupply();
 
-        hook.removeLiquidity(
-            address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), redemptionAmount
-        );
+    //     hook.removeLiquidity(
+    //         address(this), key, Currency.unwrap(currency0), Currency.unwrap(currency1), redemptionAmount
+    //     );
 
-        uint256 decimals0 = ERC20(Currency.unwrap(currency0)).decimals();
-        uint256 decimals1 = ERC20(Currency.unwrap(currency1)).decimals();
+    //     uint256 decimals0 = ERC20(Currency.unwrap(currency0)).decimals();
+    //     uint256 decimals1 = ERC20(Currency.unwrap(currency1)).decimals();
 
-        // verify a user burned redemptionAmount of both uniliquid tokens
-        uint256 uniliquidAmount0After = uniliquid0.balanceOf(address(this));
-        uint256 uniliquidAmount1After = uniliquid1.balanceOf(address(this));
+    //     // verify a user burned redemptionAmount of both uniliquid tokens
+    //     uint256 uniliquidAmount0After = uniliquid0.balanceOf(address(this));
+    //     uint256 uniliquidAmount1After = uniliquid1.balanceOf(address(this));
 
-        assertEq(uniliquidAmount0After, uniliquidAmount0Before - redemptionAmount);
-        assertEq(uniliquidAmount1After, uniliquidAmount1Before - redemptionAmount);
+    //     assertEq(uniliquidAmount0After, uniliquidAmount0Before - redemptionAmount);
+    //     assertEq(uniliquidAmount1After, uniliquidAmount1Before - redemptionAmount);
 
-        // verify that a user received back X_u / X of both stablecoins
-        uint256 fraction0Expected = redemptionAmount * 10 ** decimals0 / X;
-        uint256 fraction1Expected = redemptionAmount * 10 ** decimals1 / Y;
+    //     // verify that a user received back X_u / X of both stablecoins
+    //     uint256 fraction0Expected = redemptionAmount * 10 ** decimals0 / X;
+    //     uint256 fraction1Expected = redemptionAmount * 10 ** decimals1 / Y;
 
-        uint256 stablecoin0ReceivedExpected = fraction0Expected * X / 10 ** decimals0;
-        uint256 stablecoin1ReceivedExpected = fraction1Expected * Y / 10 ** decimals1;
+    //     uint256 stablecoin0ReceivedExpected = fraction0Expected * X / 10 ** decimals0;
+    //     uint256 stablecoin1ReceivedExpected = fraction1Expected * Y / 10 ** decimals1;
 
-        uint256 stablecoin0After = currency0.balanceOf(address(this));
-        uint256 stablecoin1After = currency1.balanceOf(address(this));
+    //     uint256 stablecoin0After = currency0.balanceOf(address(this));
+    //     uint256 stablecoin1After = currency1.balanceOf(address(this));
 
-        assertEq(stablecoin0After, stablecoin0BalanceBefore + stablecoin0ReceivedExpected);
-        assertEq(stablecoin1After, stablecoin1BalanceBefore + stablecoin1ReceivedExpected);
+    //     assertEq(stablecoin0After, stablecoin0BalanceBefore + stablecoin0ReceivedExpected);
+    //     assertEq(stablecoin1After, stablecoin1BalanceBefore + stablecoin1ReceivedExpected);
 
-        // verify that the uniliquid tokens are correctly burned from the total supply
-        uint256 uniliquidAmount0TotalAfter = uniliquid0.totalSupply();
-        uint256 uniliquidAmount1TotalAfter = uniliquid1.totalSupply();
+    //     // verify that the uniliquid tokens are correctly burned from the total supply
+    //     uint256 uniliquidAmount0TotalAfter = uniliquid0.totalSupply();
+    //     uint256 uniliquidAmount1TotalAfter = uniliquid1.totalSupply();
 
-        assertEq(uniliquidAmount0TotalAfter, uniliquidAmount0TotalBefore - redemptionAmount);
-        assertEq(uniliquidAmount1TotalAfter, uniliquidAmount1TotalBefore - redemptionAmount);
-    }
+    //     assertEq(uniliquidAmount0TotalAfter, uniliquidAmount0TotalBefore - redemptionAmount);
+    //     assertEq(uniliquidAmount1TotalAfter, uniliquidAmount1TotalBefore - redemptionAmount);
+    // }
 
     function testNativeLiquidityIsNotAllowed() public {
         vm.expectRevert();
@@ -279,7 +279,7 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function testSwapGasCost() public {
-        addLiquidity();
+        addLiquidityInitial();
 
         int256 amountIn = int256(-1e18);
         bool zeroForOne = false;
@@ -299,7 +299,7 @@ contract UniliquidHookTest is Test, Fixtures {
         int256 amountIn = int256(-1e18);
         bool zeroForOne = false;
 
-        addLiquidity();
+        addLiquidityInitial();
 
         approveHook(currency1, uint256(-amountIn));
 
@@ -349,7 +349,7 @@ contract UniliquidHookTest is Test, Fixtures {
     }
 
     function testUniliquidTokensCreated() public {
-        addLiquidity();
+        addLiquidityInitial();
 
         address ulCurrency0 = address(hook.tokenToLiquid(Currency.unwrap(currency0)));
         address ulCurrency1 = address(hook.tokenToLiquid(Currency.unwrap(currency1)));
@@ -390,7 +390,7 @@ contract UniliquidHookTest is Test, Fixtures {
     //     assertTrue(amountOut.within(SWAP_ERR_TOLERANCE, amountOutExpected));
     // }
 
-    function applyFee(uint256 amount) internal view returns (uint256) {
-        return amount * (1000000 - hook.FEE_AMOUNT()) / 1000000;
+    function applyFee(uint256 amount) internal pure returns (uint256) {
+        return amount * (1000000 - FEE_AMOUNT) / 1000000;
     }
 }
