@@ -15,6 +15,7 @@ import {toBeforeSwapDelta, BeforeSwapDelta} from "v4-core/src/types/BeforeSwapDe
 import {SafeCallback} from "v4-periphery/src/base/SafeCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UniliquidVariables} from "./UniliquidVariables.sol";
+import {PoolToken} from "./PoolToken.sol";
 
 /// @title UniliquidHook
 /// @author Ruslan Akhtariev
@@ -31,6 +32,10 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
     mapping(address => Uniliquid) public tokenToLiquid;
     /// @notice Mapping of pool reserves
     mapping(PoolId => PoolReserves) public poolToReserves;
+    /// @notice Mapping of pool fee accrual
+    mapping(PoolId => PoolFeeAccrual) public poolToFeeAccrual;
+    /// @notice Mapping of pool fee tokens
+    mapping(PoolId => PoolToken) public poolToToken;
 
     bool private reentrancyGuard_ = false;
 
@@ -156,7 +161,7 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         poolManager.mint(address(this), input.toId(), amountIn);
 
         // Normalize input amount
-        uint256 normalizedIn = amountIn.scaleAmount(ERC20(currency0).decimals(), CFMMLibrary.NORMALIZED_DECIMALS);
+        uint256 normalizedIn = amountIn.scaleAmount(ERC20(Currency.unwrap(input)).decimals(), CFMMLibrary.NORMALIZED_DECIMALS);
 
         // decode the minimum amount out
         uint256 minAmountOut = abi.decode(data, (uint256));
@@ -165,10 +170,13 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         uint256 normalizedOut = CFMMLibrary.binarySearchExactIn(k, reserveOut, reserveIn, normalizedIn);
 
         // apply fee
-        normalizedOut = normalizedOut.applyFee(key.fee);
+        (uint256 normalizedOutAfterFee, uint256 feeAmountNormalized) = normalizedOut.applyFee(key.fee);
 
         // Convert output back to token decimals
-        uint256 amountOut = normalizedOut.scaleAmount(CFMMLibrary.NORMALIZED_DECIMALS, ERC20(currency1).decimals());
+        uint256 amountOut = normalizedOutAfterFee.scaleAmount(
+            CFMMLibrary.NORMALIZED_DECIMALS,
+            ERC20(Currency.unwrap(output)).decimals()
+        );
 
         // check if the output amount is less than the minimum amount out
         if (amountOut < minAmountOut) {
@@ -179,9 +187,13 @@ contract UniliquidHook is BaseHook, UniliquidVariables, SafeCallback {
         if (params.zeroForOne) {
             poolToReserves[key.toId()].currency0Reserves += normalizedIn;
             poolToReserves[key.toId()].currency1Reserves -= normalizedOut;
+
+            poolToFeeAccrual[key.toId()].feeAccruedToken1 += feeAmountNormalized;
         } else {
             poolToReserves[key.toId()].currency0Reserves -= normalizedOut;
             poolToReserves[key.toId()].currency1Reserves += normalizedIn;
+
+            poolToFeeAccrual[key.toId()].feeAccruedToken0 += feeAmountNormalized;
         }
 
         poolManager.burn(address(this), output.toId(), amountOut);

@@ -346,6 +346,9 @@ contract UniliquidHookTest is Test, Fixtures {
         currency0BalanceChange = currency0BalanceBefore - currency0BalanceAfter;
         currency1BalanceChange = currency1BalanceAfter - currency1BalanceBefore;
 
+        console.log("currency1BalanceChange", currency1BalanceChange);
+        console.log("amountOutExpected", amountOutExpected);
+
         assertTrue(currency1BalanceChange.within(SWAP_ERR_TOLERANCE, amountOutExpected));
         assertEq(currency0BalanceChange, uint256(-amountIn));
     }

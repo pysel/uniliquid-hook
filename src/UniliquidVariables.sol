@@ -30,6 +30,12 @@ contract UniliquidVariables {
         uint256 currency1Reserves;
     }
 
+    /// @notice Per-pool fee accrual
+    struct PoolFeeAccrual {
+        uint256 feeAccruedToken0;
+        uint256 feeAccruedToken1;
+    }
+
     /* Naming convention for uniliquid erc-20 stablecoins
         Symbol: ul<stablecoin_symbol>
         Name: uniliquid <stablecoin_name>

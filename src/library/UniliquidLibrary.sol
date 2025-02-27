@@ -19,8 +19,10 @@ library UniliquidLibrary {
     /// @param amount The amount to apply the fee to
     /// @param fee The fee to apply
     /// @return The amount after the fee is applied
-    function applyFee(uint256 amount, uint256 fee) internal pure returns (uint256) {
-        return (amount * (1000000 - fee)) / 1000000;
+    function applyFee(uint256 amount, uint256 fee) internal pure returns (uint256, uint256) {
+        uint256 result = (amount * (1000000 - fee)) / 1000000;
+        uint256 feeAmount = amount - result;
+        return (result, feeAmount);
     }
 
     /// @notice Scales an amount from one decimal precision to another
